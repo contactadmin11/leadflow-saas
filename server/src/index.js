@@ -117,6 +117,23 @@ app.use('/api/admin',      adminRoutes);
 app.use('/api/migrate',    protect, subscriptionGuard, migrateRoutes);
 app.use('/api/wa',         protect, subscriptionGuard, waRoutes);
 
+// ── Admin Panel HTML — only accessible via secret URL token ──────────────
+// Direct access to /admin.html is BLOCKED — must use /admin?t=<ADMIN_JWT_SECRET first 16 chars>
+app.get(['/admin.html', '/admin'], (req, res) => {
+  const ADMIN_SECRET_PREFIX = (process.env.ADMIN_JWT_SECRET || '').substring(0, 16);
+  const providedToken = req.query.t || '';
+  if (!providedToken || providedToken !== ADMIN_SECRET_PREFIX) {
+    return res.status(403).send('<h2 style="font-family:sans-serif;color:#dc2626;padding:40px">403 Forbidden — Access Denied</h2>');
+  }
+  const filePath = path.join(clientPath, 'admin.html');
+  if (!fs.existsSync(filePath)) {
+    const rootAdmin = path.join(__dirname, '..', '..', 'admin.html');
+    if (fs.existsSync(rootAdmin)) return res.sendFile(rootAdmin);
+    return res.status(404).send('Admin panel not found');
+  }
+  res.sendFile(filePath);
+});
+
 // ── Serve frontend — inject APP_SECRET at serve time ─────────────────────────
 // Try cwd-relative path first (Docker: /app/client), then __dirname-relative (local dev)
 let clientPath = path.join(process.cwd(), 'client');
