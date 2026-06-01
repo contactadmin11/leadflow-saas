@@ -144,17 +144,16 @@ button{font:inherit;font-weight:800;border:0;border-radius:10px;cursor:pointer}.
 
 <script>
 // ─── State ────────────────────────────────────────────────────────────────────
-// SECURITY: sessionStorage used instead of localStorage
-// sessionStorage is cleared when tab/browser closes — token never persists
-let token = sessionStorage.getItem('adminToken') || '';
+// SECURITY: Token stored in JS memory ONLY — invisible to DevTools Application tab
+// Token is lost when tab closes — no persistence anywhere in browser storage
+let token = '';
 let keys = [], filter = 'all', selectedId = '', lastCreated = null;
 let warnTimer = null, expireTimer = null;
 
 const planLabels = { trial:'7-Day Trial','1month':'1 Month','3months':'3 Months','6months':'6 Months','1year':'1 Year',custom:'Custom' };
 const prices     = { trial:0,'1month':499,'3months':1299,'6months':2399,'1year':3999 };
 
-// On page load — always verify token with server first before showing dashboard
-if (token) verifyThenShow();
+// No auto-restore on page load — must login fresh every session
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 function decodeExp(t) {
@@ -204,8 +203,7 @@ async function adminLogin() {
       body: JSON.stringify({ password: pw }),
       headers: { authorization: '' }
     });
-    token = data.token;
-    sessionStorage.setItem('adminToken', token);
+    token = data.token;  // stored in memory only — NOT in sessionStorage or localStorage
     document.getElementById('password').value = ''; // clear immediately
     showDash();
   } catch(e) {
@@ -216,8 +214,7 @@ async function adminLogin() {
 function logout() {
   if (warnTimer)   clearTimeout(warnTimer);
   if (expireTimer) clearTimeout(expireTimer);
-  sessionStorage.removeItem('adminToken');
-  token = ''; keys = [];
+  token = ''; keys = []; // token wiped from memory
   document.getElementById('dash').style.display = 'none';
   document.getElementById('login').classList.remove('hidden');
   document.getElementById('sessionWarn').classList.remove('show');
