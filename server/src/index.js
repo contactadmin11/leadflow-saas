@@ -127,7 +127,7 @@ if (!fs.existsSync(clientPath)) {
 // ── Admin Panel HTML — only accessible via secret URL token ──────────────
 // Direct access to /admin.html is BLOCKED — must use /admin?t=<token>
 app.get(['/admin.html', '/admin'], (req, res) => {
-  const ADMIN_SECRET_PREFIX = (process.env.ADMIN_JWT_SECRET || '').substring(0, 16);
+  const ADMIN_SECRET_PREFIX = (process.env.ADMIN_JWT_SECRET || '').substring(0, 12);
   const providedToken = req.query.t || '';
   if (!providedToken || providedToken !== ADMIN_SECRET_PREFIX) {
     return res.status(403).send('<h2 style="font-family:sans-serif;color:#dc2626;padding:40px">403 Forbidden — Access Denied</h2>');
