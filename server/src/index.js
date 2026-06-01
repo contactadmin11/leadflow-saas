@@ -10,6 +10,7 @@ const morgan     = require('morgan');
 const rateLimit  = require('express-rate-limit');
 const mongoose   = require('mongoose');
 const path       = require('path');
+const fs         = require('fs');
 
 const logger          = require('./config/logger');
 const authRoutes      = require('./routes/auth.routes');
@@ -117,8 +118,11 @@ app.use('/api/migrate',    protect, subscriptionGuard, migrateRoutes);
 app.use('/api/wa',         protect, subscriptionGuard, waRoutes);
 
 // ── Serve frontend — inject APP_SECRET at serve time ─────────────────────────
-const clientPath = path.join(__dirname, '..', '..', 'client');
-const fs = require('fs');
+// Try cwd-relative path first (Docker: /app/client), then __dirname-relative (local dev)
+let clientPath = path.join(process.cwd(), 'client');
+if (!fs.existsSync(clientPath)) {
+  clientPath = path.join(__dirname, '..', '..', 'client');
+}
 
 if (fs.existsSync(clientPath)) {
   const APP_SECRET = process.env.APP_SECRET || '';
