@@ -1,0 +1,8 @@
+node_modules/
+.env
+*.env
+wa_sessions/
+logs/
+*.log
+.DS_Store
+Thumbs.db

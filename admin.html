@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>License Manager - PF & ESI Manager Pro</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#0f1220;color:#e5e7eb;min-height:100vh}
+a{color:#a5b4fc}.login{position:fixed;inset:0;display:grid;place-items:center;background:linear-gradient(135deg,#101426,#22245b);z-index:5}
+.login.hidden{display:none}.login-card{width:min(92vw,390px);background:#171a33;border:1px solid #4f46e5;border-radius:18px;padding:34px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+.login-card h1{font-size:23px;margin:8px 0;color:#fff}.login-card p{font-size:13px;color:#a5b4fc;margin:0 0 22px;line-height:1.5}
+.login-card input{width:100%;background:#0b1020;border:1px solid #4f46e5;color:#fff;border-radius:11px;padding:14px;text-align:center;font-size:15px;letter-spacing:1px}
+button{font:inherit;font-weight:800;border:0;border-radius:10px;cursor:pointer}.login-card button,.primary{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:12px 18px}.login-card button{width:100%;margin-top:12px}
+.danger{background:#7f1d1d;color:#fecaca}.muted-btn{background:#1f2937;color:#cbd5e1;border:1px solid #334155}.green{background:#064e3b;color:#86efac;border:1px solid #34d399}.orange{background:#451a03;color:#fde68a;border:1px solid #f59e0b}.blue{background:#172554;color:#bfdbfe;border:1px solid #60a5fa}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;background:linear-gradient(135deg,#171a33,#4338ca);padding:15px 24px}.topbar h2{margin:0;font-size:18px;color:#fff}.topbar span{font-size:12px;color:#c7d2fe}
+.wrap{max-width:1420px;margin:0 auto;padding:20px}.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:18px}.stat{background:#171a33;border:1px solid #2d335f;border-radius:14px;padding:16px;text-align:center}.stat .v{font-size:27px;font-weight:900;color:#a5b4fc}.stat .k{font-size:11px;color:#94a3b8;text-transform:uppercase;margin-top:4px}
+.card{background:#171a33;border:1px solid #2d335f;border-radius:16px;margin-bottom:18px;overflow:hidden}.card-head{padding:14px 18px;background:#1e1b4b;border-bottom:1px solid #2d335f;display:flex;justify-content:space-between;align-items:center;gap:10px}.card-head h3{margin:0;font-size:15px}.card-body{padding:18px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.field label{display:block;font-size:11px;color:#a5b4fc;text-transform:uppercase;font-weight:800;margin-bottom:6px}.field input,.field select{width:100%;background:#0b1020;border:1px solid #2d335f;border-radius:10px;color:#e5e7eb;padding:11px 12px;font-size:13px}.field input:focus,.field select:focus{outline:0;border-color:#6366f1}
+.key-box{display:none;margin-top:16px;background:#0b1020;border:2px dashed #6366f1;border-radius:14px;text-align:center;padding:20px}.key-value{font-family:Consolas,monospace;font-size:24px;font-weight:900;letter-spacing:2px;color:#a5b4fc}.key-meta{font-size:12px;color:#94a3b8;margin:8px 0 14px}
+.search-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.search-row input{flex:1;min-width:220px;background:#0b1020;border:1px solid #2d335f;color:#e5e7eb;border-radius:10px;padding:10px 13px}.filter{background:#111827;color:#94a3b8;border:1px solid #334155;padding:9px 13px}.filter.active{border-color:#6366f1;color:#c7d2fe;background:#1e1b4b}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#0b1020;color:#a5b4fc;text-align:left;text-transform:uppercase;font-size:10px;letter-spacing:.5px;padding:11px;border-bottom:1px solid #2d335f;white-space:nowrap}td{padding:11px;border-bottom:1px solid #202646;white-space:nowrap;vertical-align:middle}tr:hover td{background:#1e1b4b44}
+.mono{font-family:Consolas,monospace;color:#a5b4fc;letter-spacing:1px}.badge{display:inline-block;border-radius:999px;padding:4px 10px;font-size:10px;font-weight:900}.active-b{background:#064e3b;color:#86efac}.expired-b{background:#7f1d1d;color:#fecaca}.expiring-b{background:#78350f;color:#fde68a}.revoked-b{background:#1f2937;color:#cbd5e1}
+.bar{display:inline-block;width:80px;height:6px;background:#1f2937;border-radius:9px;margin-left:6px;vertical-align:middle}.fill{display:block;height:100%;border-radius:9px;background:#6366f1}.row-actions{display:flex;gap:5px;flex-wrap:wrap}.btn-sm{font-size:11px;padding:6px 10px}
+.toast{position:fixed;right:22px;bottom:22px;background:#059669;color:#fff;border-radius:12px;padding:12px 18px;font-weight:800;transform:translateY(90px);opacity:0;transition:.25s;z-index:10}.toast.show{transform:translateY(0);opacity:1}.toast.err{background:#dc2626}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;padding:16px;z-index:4}.modal.show{display:flex}.modal-box{width:min(92vw,380px);background:#171a33;border:1px solid #6366f1;border-radius:16px;padding:22px}
+.session-warn{background:#451a03;border-bottom:1px solid #f59e0b;color:#fde68a;padding:8px 18px;font-size:12px;text-align:center;display:none}.session-warn.show{display:block}
+@media(max-width:900px){.grid{grid-template-columns:1fr 1fr}.stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.grid{grid-template-columns:1fr}.topbar{display:block}.wrap{padding:14px}.key-value{font-size:17px}}
+</style>
+</head>
+<body>
+
+<section id="login" class="login">
+  <div class="login-card">
+    <div style="font-size:38px">🔐</div>
+    <h1>License Manager</h1>
+    <p>PF &amp; ESI Manager Pro admin panel<br>Use your secure admin password.</p>
+    <input id="password" type="password" placeholder="Admin Password" onkeydown="if(event.key==='Enter')adminLogin()">
+    <button onclick="adminLogin()">Login</button>
+    <p id="loginError" style="color:#fca5a5;margin-top:10px;min-height:20px"></p>
+  </div>
+</section>
+
+<main id="dash" style="display:none">
+  <div id="sessionWarn" class="session-warn">⚠️ Session expiring soon — please save your work and login again.</div>
+  <div class="topbar">
+    <div><h2>⚡ License Manager - PF &amp; ESI Manager Pro</h2><span id="sessionInfo">DigitalOcean · MongoDB</span></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <a href="/">Open App</a>
+      <button class="muted-btn btn-sm" onclick="loadKeys()">Refresh</button>
+      <button class="muted-btn btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <section class="stats">
+      <div class="stat"><div id="statActive" class="v">0</div><div class="k">Active</div></div>
+      <div class="stat"><div id="statExpiring" class="v">0</div><div class="k">Expiring 7d</div></div>
+      <div class="stat"><div id="statExpired" class="v">0</div><div class="k">Expired</div></div>
+      <div class="stat"><div id="statRevoked" class="v">0</div><div class="k">Revoked</div></div>
+      <div class="stat"><div id="statTotal" class="v">0</div><div class="k">Total Keys</div></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h3>Generate New License Key</h3></div>
+      <div class="card-body">
+        <div class="grid">
+          <div class="field"><label>Client / Firm Name</label><input id="clientName" placeholder="ABC &amp; Associates"></div>
+          <div class="field"><label>Email</label><input id="clientEmail" type="email" placeholder="client@firm.com"></div>
+          <div class="field"><label>Mobile / WhatsApp</label><input id="clientMobile" placeholder="98XXXXXXXX"></div>
+          <div class="field"><label>Plan</label>
+            <select id="duration" onchange="syncPrice()">
+              <option value="trial">7-Day Trial</option>
+              <option value="1month">1 Month</option>
+              <option value="3months">3 Months</option>
+              <option value="6months">6 Months</option>
+              <option value="1year">1 Year</option>
+              <option value="custom">Custom Days</option>
+            </select>
+          </div>
+          <div class="field"><label>Custom Days</label><input id="customDays" type="number" min="1" placeholder="Only for custom"></div>
+          <div class="field"><label>Max Users</label><select id="maxUsers"><option>1</option><option>2</option><option>3</option><option>5</option><option>10</option></select></div>
+          <div class="field"><label>Price ₹</label><input id="price" type="number" placeholder="For record"></div>
+          <div class="field"><label>Internal Notes</label><input id="notes" placeholder="Referral, payment, etc."></div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button class="primary" onclick="createKey()">Generate Key</button>
+          <span id="priceHint" style="color:#a5b4fc;font-size:13px"></span>
+        </div>
+        <div id="keyBox" class="key-box">
+          <div style="color:#86efac;font-weight:900;margin-bottom:8px">✅ KEY GENERATED</div>
+          <div id="newKey" class="key-value"></div>
+          <div id="newMeta" class="key-meta"></div>
+          <button class="blue btn-sm" onclick="copyGenerated()">Copy Key</button>
+          <button class="green btn-sm" onclick="copyWhatsApp()">Copy WhatsApp Message</button>
+          <button class="muted-btn btn-sm" onclick="copyEmail()">Copy Email Message</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h3>All License Keys</h3>
+        <button class="muted-btn btn-sm" onclick="exportCSV()">Export CSV</button>
+      </div>
+      <div class="card-body">
+        <div class="search-row">
+          <input id="search" placeholder="Search name, email, mobile, key..." oninput="render()">
+          <button id="f-all" class="filter active" onclick="setFilter('all')">All</button>
+          <button id="f-active" class="filter" onclick="setFilter('active')">Active</button>
+          <button id="f-expiring" class="filter" onclick="setFilter('expiring')">Expiring</button>
+          <button id="f-expired" class="filter" onclick="setFilter('expired')">Expired</button>
+          <button id="f-revoked" class="filter" onclick="setFilter('revoked')">Revoked</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Client</th><th>Key</th><th>Plan</th><th>Valid Until</th><th>Days</th><th>Status</th><th>Last Used</th><th>Actions</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="modal" class="modal">
+  <div class="modal-box">
+    <h3>Extend Subscription</h3>
+    <p id="extendLabel" style="color:#a5b4fc;word-break:break-all"></p>
+    <div class="field"><label>Extend By</label>
+      <select id="extendDays">
+        <option value="7">7 days</option><option value="30">30 days</option>
+        <option value="90">90 days</option><option value="180">180 days</option>
+        <option value="365">365 days</option>
+      </select>
+    </div>
+    <div style="margin-top:14px">
+      <button class="primary" onclick="confirmExtend()">Extend</button>
+      <button class="muted-btn" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+// SECURITY: sessionStorage used instead of localStorage
+// sessionStorage is cleared when tab/browser closes — token never persists
+let token = sessionStorage.getItem('adminToken') || '';
+let keys = [], filter = 'all', selectedId = '', lastCreated = null;
+let warnTimer = null, expireTimer = null;
+
+const planLabels = { trial:'7-Day Trial','1month':'1 Month','3months':'3 Months','6months':'6 Months','1year':'1 Year',custom:'Custom' };
+const prices     = { trial:0,'1month':499,'3months':1299,'6months':2399,'1year':3999 };
+
+// On page load — always verify token with server first before showing dashboard
+if (token) verifyThenShow();
+
+// ─── Token helpers ────────────────────────────────────────────────────────────
+function decodeExp(t) {
+  try {
+    const b64 = t.split('.')[0].replace(/-/g,'+').replace(/_/g,'/');
+    return JSON.parse(atob(b64)).exp || 0;
+  } catch { return 0; }
+}
+
+function startTimers(t) {
+  if (warnTimer)   clearTimeout(warnTimer);
+  if (expireTimer) clearTimeout(expireTimer);
+  const exp       = decodeExp(t);
+  if (!exp) return;
+  const now       = Date.now();
+  const remaining = exp - now;
+  const warnIn    = remaining - 15 * 60 * 1000;
+  document.getElementById('sessionInfo').textContent =
+    'Session valid until ' + new Date(exp).toLocaleTimeString('en-IN');
+  if (warnIn > 0)
+    warnTimer = setTimeout(() => document.getElementById('sessionWarn').classList.add('show'), warnIn);
+  if (remaining > 0)
+    expireTimer = setTimeout(() => { toast('Session expired — please login again', true); logout(); }, remaining);
+  else logout();
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+async function verifyThenShow() {
+  // Always verify with server — don't trust storage blindly
+  try {
+    await api('/api/admin/licenses');
+    showDash();
+  } catch {
+    sessionStorage.removeItem('adminToken');
+    token = '';
+  }
+}
+
+async function adminLogin() {
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  const pw = document.getElementById('password').value;
+  if (!pw) { errEl.textContent = 'Password required'; return; }
+  try {
+    const data = await api('/api/admin/login', {
+      method: 'POST',
+      body: JSON.stringify({ password: pw }),
+      headers: { authorization: '' }
+    });
+    token = data.token;
+    sessionStorage.setItem('adminToken', token);
+    document.getElementById('password').value = ''; // clear immediately
+    showDash();
+  } catch(e) {
+    errEl.textContent = e.message;
+  }
+}
+
+function logout() {
+  if (warnTimer)   clearTimeout(warnTimer);
+  if (expireTimer) clearTimeout(expireTimer);
+  sessionStorage.removeItem('adminToken');
+  token = ''; keys = [];
+  document.getElementById('dash').style.display = 'none';
+  document.getElementById('login').classList.remove('hidden');
+  document.getElementById('sessionWarn').classList.remove('show');
+  document.getElementById('sessionInfo').textContent = 'DigitalOcean · MongoDB';
+  document.getElementById('password').value = '';
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('keyBox').style.display = 'none';
+}
+
+function showDash() {
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('dash').style.display = 'block';
+  startTimers(token);
+  loadKeys();
+  syncPrice();
+}
+
+// ─── API helper ───────────────────────────────────────────────────────────────
+async function api(path, opt = {}) {
+  const res = await fetch(path, {
+    ...opt,
+    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token, ...(opt.headers || {}) }
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    toast('Session expired — please login again', true);
+    setTimeout(logout, 1500);
+    throw new Error('Unauthorized');
+  }
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+// ─── Data ─────────────────────────────────────────────────────────────────────
+async function loadKeys() {
+  try {
+    const data = await api('/api/admin/licenses');
+    keys = data.licenses || [];
+    updateStats(); render();
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+function syncPrice() {
+  const p = prices[document.getElementById('duration').value];
+  document.getElementById('priceHint').textContent = p !== undefined ? 'Suggested price: ₹' + p : '';
+}
+
+async function createKey() {
+  if (!document.getElementById('clientName').value.trim()) return toast('Client name required', true);
+  try {
+    const body = {
+      clientName:   document.getElementById('clientName').value,
+      clientEmail:  document.getElementById('clientEmail').value,
+      clientMobile: document.getElementById('clientMobile').value,
+      duration:     document.getElementById('duration').value,
+      customDays:   Number(document.getElementById('customDays').value || 0),
+      maxUsers:     Number(document.getElementById('maxUsers').value || 1),
+      price:        document.getElementById('price').value,
+      notes:        document.getElementById('notes').value
+    };
+    const data = await api('/api/admin/licenses', { method:'POST', body: JSON.stringify(body) });
+    lastCreated = data.license;
+    document.getElementById('newKey').textContent  = lastCreated.key;
+    document.getElementById('newMeta').textContent =
+      (lastCreated.clientName || '') + ' | ' +
+      (planLabels[lastCreated.plan] || lastCreated.plan) + ' | Valid until ' + fmtDate(lastCreated.expiresAt);
+    document.getElementById('keyBox').style.display = 'block';
+    ['clientName','clientEmail','clientMobile','notes','price','customDays'].forEach(id =>
+      document.getElementById(id).value = ''
+    );
+    toast('Key generated ✅'); loadKeys();
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN') : '-';
+
+function updateStats() {
+  const c = { active:0, expiring:0, expired:0, revoked:0 };
+  keys.forEach(k => { if (c[k.status] !== undefined) c[k.status]++; });
+  document.getElementById('statActive').textContent   = c.active;
+  document.getElementById('statExpiring').textContent = c.expiring;
+  document.getElementById('statExpired').textContent  = c.expired;
+  document.getElementById('statRevoked').textContent  = c.revoked;
+  document.getElementById('statTotal').textContent    = keys.length;
+}
+
+function setFilter(f) {
+  filter = f;
+  document.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
+  document.getElementById('f-' + f).classList.add('active');
+  render();
+}
+
+function render() {
+  const q    = document.getElementById('search').value.toLowerCase();
+  const list = keys.filter(k =>
+    (filter === 'all' || k.status === filter) &&
+    (!q || [k.clientName,k.clientEmail,k.clientMobile,k.key,k.notes].join(' ').toLowerCase().includes(q))
+  );
+  document.getElementById('rows').innerHTML = list.length
+    ? list.map((k,i) => row(k,i)).join('')
+    : '<tr><td colspan="9" style="text-align:center;padding:28px;color:#94a3b8">No keys found</td></tr>';
+}
+
+// SECURITY: data-* attributes used instead of inline string interpolation in onclick
+// Prevents XSS if a malicious id/key value is somehow stored in DB
+function row(k, i) {
+  const days  = Math.max(0, k.daysRemaining || 0);
+  const pct   = Math.min(100, days / 365 * 100);
+  const color = days <= 7 ? '#f87171' : days <= 30 ? '#f59e0b' : '#6366f1';
+  const badge = { active:'active-b', expiring:'expiring-b', expired:'expired-b', revoked:'revoked-b' }[k.status] || 'active-b';
+  return `<tr>
+    <td>${i+1}</td>
+    <td><b>${esc(k.clientName||k.label||'-')}</b><br><span style="color:#94a3b8">${esc(k.clientEmail||'')}</span></td>
+    <td><span class="mono">${esc(k.key)}</span> <button class="muted-btn btn-sm" data-copy="${esc(k.key)}" onclick="copyText(this.dataset.copy)">Copy</button></td>
+    <td>${planLabels[k.plan]||k.plan||'-'}</td>
+    <td>${fmtDate(k.expiresAt)}</td>
+    <td><b style="color:${color}">${days?days+'d':'Expired'}</b><span class="bar"><span class="fill" style="width:${pct}%;background:${color}"></span></span></td>
+    <td><span class="badge ${badge}">${k.status.toUpperCase()}</span></td>
+    <td>${fmtDate(k.lastVerifiedAt)}</td>
+    <td><div class="row-actions">
+      ${k.status !== 'revoked'
+        ? `<button class="orange btn-sm" data-id="${k.id}" onclick="openExtend(this.dataset.id)">Extend</button>
+           <button class="danger btn-sm" data-id="${k.id}" onclick="act(this.dataset.id,'revoke')">Revoke</button>`
+        : `<button class="green btn-sm" data-id="${k.id}" onclick="act(this.dataset.id,'reactivate')">Reactivate</button>`}
+      <button class="blue btn-sm" data-id="${k.id}" onclick="act(this.dataset.id,'reset-devices')" title="Reset active devices">↺ Devices (${k.activeDevices||0}/${k.maxUsers||1})</button>
+      <button class="muted-btn btn-sm" data-id="${k.id}" onclick="act(this.dataset.id,'delete')">Delete</button>
+    </div></td>
+  </tr>`;
+}
+
+// SECURITY: Full HTML escaping — prevents XSS from stored data
+function esc(v) {
+  return String(v||'').replace(/[&<>"']/g, m =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])
+  );
+}
+
+async function act(id, action) {
+  if (action === 'delete'        && !confirm('Permanently delete this key?')) return;
+  if (action === 'revoke'        && !confirm('Revoke this key now?')) return;
+  if (action === 'reset-devices' && !confirm('Reset all active devices? Client will need to activate again.')) return;
+  try {
+    await api(`/api/admin/licenses/${id}/${action}`, { method:'POST', body:'{}' });
+    toast('Updated ✅'); loadKeys();
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+function openExtend(id) {
+  selectedId = id;
+  const k = keys.find(x => x.id === id);
+  document.getElementById('extendLabel').textContent = k ? k.key : '';
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal() { document.getElementById('modal').classList.remove('show'); selectedId = ''; }
+
+async function confirmExtend() {
+  try {
+    await api(`/api/admin/licenses/${selectedId}/extend`, {
+      method: 'POST',
+      body: JSON.stringify({ days: Number(document.getElementById('extendDays').value) })
+    });
+    closeModal(); toast('Extended ✅'); loadKeys();
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+// ─── Copy helpers ─────────────────────────────────────────────────────────────
+function copyGenerated() { if (lastCreated) copyText(lastCreated.key); }
+function copyText(t) { navigator.clipboard.writeText(t).then(() => toast('Copied ✅')); }
+function copyWhatsApp() {
+  if (!lastCreated) return;
+  copyText(
+    `Namaste! Your PF & ESI Manager Pro license key is ready.\n\n` +
+    `Key: ${lastCreated.key}\n` +
+    `Plan: ${planLabels[lastCreated.plan]||lastCreated.plan}\n` +
+    `Valid until: ${fmtDate(lastCreated.expiresAt)}\n\n` +
+    `Open the app and enter this key to activate.`
+  );
+}
+function copyEmail() {
+  if (!lastCreated) return;
+  copyText(
+    `Subject: PF & ESI Manager Pro License Key\n\nDear Client,\n\n` +
+    `Your license key is: ${lastCreated.key}\n` +
+    `Plan: ${planLabels[lastCreated.plan]||lastCreated.plan}\n` +
+    `Valid until: ${fmtDate(lastCreated.expiresAt)}\n\nRegards`
+  );
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+function exportCSV() {
+  const rows = [
+    ['Client','Email','Mobile','Key','Plan','Expires','Days','Status','Notes'],
+    ...keys.map(k => [k.clientName,k.clientEmail,k.clientMobile,k.key,k.plan,
+      fmtDate(k.expiresAt),k.daysRemaining,k.status,k.notes])
+  ];
+  const csv = rows.map(r => r.map(c => `"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a   = document.createElement('a');
+  a.href     = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'license_keys.csv';
+  a.click();
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg, err) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast show' + (err ? ' err' : '');
+  setTimeout(() => t.className = 'toast', 2600);
+}
+</script>
+</body>
+</html>

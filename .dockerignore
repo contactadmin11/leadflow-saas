@@ -1,0 +1,8 @@
+node_modules
+server/node_modules
+.git
+.env
+server/.env
+*.log
+wa_sessions
+.gemini

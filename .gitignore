@@ -1,0 +1,25 @@
+# Secrets & environment
+server/.env
+.env
+.env.local
+.env.production
+
+# Node modules
+node_modules/
+server/node_modules/
+
+# WhatsApp sessions (stored on server volume)
+wa_sessions/
+server/wa_sessions/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+.next/

@@ -1,0 +1,14 @@
+{
+  "name": "leadflow-server",
+  "version": "1.0.0",
+  "description": "LeadFlow WhatsApp + Email Auto-Send Server",
+  "main": "leadflow_node_server.js",
+  "scripts": { "start": "node leadflow_node_server.js" },
+  "dependencies": {
+    "whatsapp-web.js": "^1.23.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "qrcode-terminal": "^0.12.0",
+    "nodemailer": "^6.9.7"
+  }
+}
