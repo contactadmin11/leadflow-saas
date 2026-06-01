@@ -117,8 +117,15 @@ app.use('/api/admin',      adminRoutes);
 app.use('/api/migrate',    protect, subscriptionGuard, migrateRoutes);
 app.use('/api/wa',         protect, subscriptionGuard, waRoutes);
 
+// ── Resolve client path FIRST — before any route that uses it ─────────────
+// Try cwd-relative path first (Docker: /app/client), then __dirname-relative (local dev)
+let clientPath = path.join(process.cwd(), 'client');
+if (!fs.existsSync(clientPath)) {
+  clientPath = path.join(__dirname, '..', '..', 'client');
+}
+
 // ── Admin Panel HTML — only accessible via secret URL token ──────────────
-// Direct access to /admin.html is BLOCKED — must use /admin?t=<ADMIN_JWT_SECRET first 16 chars>
+// Direct access to /admin.html is BLOCKED — must use /admin?t=<token>
 app.get(['/admin.html', '/admin'], (req, res) => {
   const ADMIN_SECRET_PREFIX = (process.env.ADMIN_JWT_SECRET || '').substring(0, 16);
   const providedToken = req.query.t || '';
@@ -126,21 +133,14 @@ app.get(['/admin.html', '/admin'], (req, res) => {
     return res.status(403).send('<h2 style="font-family:sans-serif;color:#dc2626;padding:40px">403 Forbidden — Access Denied</h2>');
   }
   const filePath = path.join(clientPath, 'admin.html');
-  if (!fs.existsSync(filePath)) {
-    const rootAdmin = path.join(__dirname, '..', '..', 'admin.html');
-    if (fs.existsSync(rootAdmin)) return res.sendFile(rootAdmin);
-    return res.status(404).send('Admin panel not found');
-  }
-  res.sendFile(filePath);
+  if (fs.existsSync(filePath)) return res.sendFile(filePath);
+  // Fallback: check root admin.html
+  const rootAdmin = path.join(__dirname, '..', '..', 'admin.html');
+  if (fs.existsSync(rootAdmin)) return res.sendFile(rootAdmin);
+  return res.status(404).send('Admin panel not found');
 });
 
 // ── Serve frontend — inject APP_SECRET at serve time ─────────────────────────
-// Try cwd-relative path first (Docker: /app/client), then __dirname-relative (local dev)
-let clientPath = path.join(process.cwd(), 'client');
-if (!fs.existsSync(clientPath)) {
-  clientPath = path.join(__dirname, '..', '..', 'client');
-}
-
 if (fs.existsSync(clientPath)) {
   const APP_SECRET = process.env.APP_SECRET || '';
 
@@ -186,36 +186,52 @@ app.use('*', (req, res) => {
 // ── Global error handler ──────────────────────────────────────────────────
 app.use(errorHandler);
 
-// ── Start server immediately, then connect to MongoDB ─────────────────────
+// ── Connect to MongoDB FIRST, then start server ──────────────────────────
 const PORT = process.env.PORT || 3001;
 
-const server = app.listen(PORT, () => {
-  logger.info(`🚀 LeadFlow Server running on port ${PORT}`);
-  logger.info(`   Environment : ${process.env.NODE_ENV || 'development'}`);
-  logger.info(`   Health:       http://localhost:${PORT}/health`);
-  logger.info(`   App:          http://localhost:${PORT}`);
-});
-
-// ── Connect to MongoDB (non-blocking) ─────────────────────────────────────
-if (process.env.MONGODB_URI && !process.env.MONGODB_URI.includes('YOUR_USERNAME')) {
-  mongoose.connect(process.env.MONGODB_URI)
-    .then(() => logger.info('✅ MongoDB connected'))
-    .catch(err => {
+async function startApp() {
+  // 1. Connect to MongoDB with proper timeout and retry
+  if (process.env.MONGODB_URI && !process.env.MONGODB_URI.includes('YOUR_USERNAME')) {
+    try {
+      await mongoose.connect(process.env.MONGODB_URI, {
+        serverSelectionTimeoutMS: 30000,  // Wait up to 30s for MongoDB (Render cold start)
+        socketTimeoutMS: 45000,
+        connectTimeoutMS: 30000,
+        maxPoolSize: 10,
+        retryWrites: true,
+        retryReads: true
+      });
+      logger.info('✅ MongoDB connected: ' + mongoose.connection.name);
+    } catch (err) {
       logger.error('❌ MongoDB connection failed:', err.message);
-      logger.warn('⚠️  Server is running but database is offline. Set MONGODB_URI in .env');
+      logger.warn('⚠️  Server starting without DB. Will retry on first request.');
+    }
+  } else {
+    logger.warn('⚠️  MONGODB_URI not configured. Set it in server/.env');
+  }
+
+  // 2. Start HTTP server AFTER DB connection
+  const server = app.listen(PORT, () => {
+    logger.info(`🚀 LeadFlow Server running on port ${PORT}`);
+    logger.info(`   Environment : ${process.env.NODE_ENV || 'development'}`);
+    logger.info(`   Health:       http://localhost:${PORT}/health`);
+    logger.info(`   App:          http://localhost:${PORT}`);
+  });
+
+  // 3. Graceful shutdown
+  process.on('SIGTERM', () => {
+    logger.info('SIGTERM received. Shutting down...');
+    server.close(() => {
+      mongoose.connection.close();
+      process.exit(0);
     });
-} else {
-  logger.warn('⚠️  MONGODB_URI not configured. Set it in server/.env to enable data persistence.');
-  logger.warn('   Get a free MongoDB Atlas cluster at: https://cloud.mongodb.com');
+  });
 }
 
-// ── Graceful shutdown ─────────────────────────────────────────────────────
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received. Shutting down...');
-  server.close(() => {
-    mongoose.connection.close();
-    process.exit(0);
-  });
+startApp().catch(err => {
+  logger.error('Fatal startup error:', err);
+  process.exit(1);
 });
 
 module.exports = app;
+
