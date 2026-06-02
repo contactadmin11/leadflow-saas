@@ -47,14 +47,18 @@ app.use(helmet({
 }));
 
 // ── CORS ──────────────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5500')
+const allowedOrigins = (process.env.CLIENT_URL || 'https://leadflow-crm-india.onrender.com')
   .split(',').map(s => s.trim());
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+    if (!origin || process.env.NODE_ENV !== 'production') {
       return cb(null, true);
     }
-    cb(new Error('Not allowed by CORS'));
+    // Allow if origin exactly matches or starts with one of the allowed origins
+    if (allowedOrigins.some(o => origin.startsWith(o))) {
+      return cb(null, true);
+    }
+    cb(null, false);
   },
   credentials: true
 }));
