@@ -24,10 +24,9 @@ const router       = express.Router();
 
 // ── Plan config ────────────────────────────────────────────────────────────
 const PLANS = {
-  monthly:   { amount: 49900,  months: 1,  label: '₹499 / Month'    },
-  quarterly: { amount: 129900, months: 3,  label: '₹1,299 / Quarter' },
-  yearly:    { amount: 399900, months: 12, label: '₹3,999 / Year'    },
-  lifetime:  { amount: 999900, months: 0,  label: '₹9,999 Lifetime'  }
+  monthly:   { amount: 29900,  months: 1,  label: '₹299 / Month'    },
+  quarterly: { amount: 74900, months: 3,  label: '₹749 / Quarter' },
+  yearly:    { amount: 290000, months: 12, label: '₹2,900 / Year'    }
 };
 const TRIAL_DAYS = parseInt(process.env.TRIAL_DAYS) || 14;
 const CURRENCY   = 'INR';
