@@ -364,6 +364,7 @@ function row(k, i) {
            <button class="danger btn-sm" data-id="${k.id}" onclick="act(this.dataset.id,'revoke')">Revoke</button>`
         : `<button class="green btn-sm" data-id="${k.id}" onclick="act(this.dataset.id,'reactivate')">Reactivate</button>`}
       <button class="blue btn-sm" data-id="${k.id}" onclick="act(this.dataset.id,'reset-devices')" title="Reset active devices">↺ Devices (${k.activeDevices||0}/${k.maxUsers||1})</button>
+      <button class="orange btn-sm" onclick="changeLicenseMax('${k.id}', ${k.maxUsers||1})" title="Change Max Devices">Set Max Devices</button>
       <button class="muted-btn btn-sm" data-id="${k.id}" onclick="act(this.dataset.id,'delete')">Delete</button>
     </div></td>
   </tr>`;
@@ -512,6 +513,24 @@ async function changeDeviceCount(userId, currentMax) {
     });
     toast('Device limit updated ✅');
     loadUsers();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function changeLicenseMax(licenseId, currentMax) {
+  const newMax = prompt('Enter new maximum allowed devices for this license key:', currentMax);
+  if (newMax === null || newMax === '') return;
+  const num = parseInt(newMax);
+  if (isNaN(num) || num < 1) return alert('Invalid number');
+  
+  try {
+    await api(`/api/admin/licenses/${licenseId}/max-users`, {
+      method: 'POST',
+      body: JSON.stringify({ maxUsers: num })
+    });
+    toast('License max devices updated ✅');
+    loadKeys();
   } catch (e) {
     toast(e.message, true);
   }
