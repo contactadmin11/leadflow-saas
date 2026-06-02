@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>License Manager - PF & ESI Manager Pro</title>
+<title>Admin Panel — LeadFlow OS</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#0f1220;color:#e5e7eb;min-height:100vh}
 a{color:#a5b4fc}.login{position:fixed;inset:0;display:grid;place-items:center;background:linear-gradient(135deg,#101426,#22245b);z-index:5}
@@ -32,8 +32,8 @@ button{font:inherit;font-weight:800;border:0;border-radius:10px;cursor:pointer}.
 <section id="login" class="login">
   <div class="login-card">
     <div style="font-size:38px">🔐</div>
-    <h1>License Manager</h1>
-    <p>PF &amp; ESI Manager Pro admin panel<br>Use your secure admin password.</p>
+    <h1>LeadFlow OS Admin</h1>
+    <p>License &amp; User Management Panel<br>Use your secure admin password.</p>
     <input id="password" type="password" placeholder="Admin Password" onkeydown="if(event.key==='Enter')adminLogin()">
     <button onclick="adminLogin()">Login</button>
     <p id="loginError" style="color:#fca5a5;margin-top:10px;min-height:20px"></p>
@@ -43,7 +43,7 @@ button{font:inherit;font-weight:800;border:0;border-radius:10px;cursor:pointer}.
 <main id="dash" style="display:none">
   <div id="sessionWarn" class="session-warn">⚠️ Session expiring soon — please save your work and login again.</div>
   <div class="topbar">
-    <div><h2>⚡ License Manager - PF &amp; ESI Manager Pro</h2><span id="sessionInfo">DigitalOcean · MongoDB</span></div>
+    <div><h2>⚡ LeadFlow OS — Admin Panel</h2><span id="sessionInfo">MongoDB Atlas · Render</span></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <a href="/">Open App</a>
       <button class="muted-btn btn-sm" onclick="loadKeys()">Refresh</button>
@@ -52,12 +52,13 @@ button{font:inherit;font-weight:800;border:0;border-radius:10px;cursor:pointer}.
   </div>
 
   <div class="wrap">
-    <section class="stats">
-      <div class="stat"><div id="statActive" class="v">0</div><div class="k">Active</div></div>
+    <section class="stats" style="grid-template-columns:repeat(6,minmax(0,1fr))">
+      <div class="stat"><div id="statActive" class="v">0</div><div class="k">Active Keys</div></div>
       <div class="stat"><div id="statExpiring" class="v">0</div><div class="k">Expiring 7d</div></div>
       <div class="stat"><div id="statExpired" class="v">0</div><div class="k">Expired</div></div>
       <div class="stat"><div id="statRevoked" class="v">0</div><div class="k">Revoked</div></div>
       <div class="stat"><div id="statTotal" class="v">0</div><div class="k">Total Keys</div></div>
+      <div class="stat"><div id="statUsers" class="v">0</div><div class="k">Registered Users</div></div>
     </section>
 
     <section class="card">
@@ -115,6 +116,25 @@ button{font:inherit;font-weight:800;border:0;border-radius:10px;cursor:pointer}.
           <table>
             <thead><tr><th>#</th><th>Client</th><th>Key</th><th>Plan</th><th>Valid Until</th><th>Days</th><th>Status</th><th>Last Used</th><th>Actions</th></tr></thead>
             <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- REGISTERED USERS SECTION -->
+    <section class="card">
+      <div class="card-head">
+        <h3>👥 Registered Users</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="userSearch" placeholder="Search name, email..." oninput="renderUsers()" style="background:#0b1020;border:1px solid #2d335f;color:#e5e7eb;border-radius:8px;padding:7px 11px;font-size:12px;width:200px">
+          <button class="muted-btn btn-sm" onclick="loadUsers()">Refresh</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Registered</th><th>Last Login</th><th>Subscription</th></tr></thead>
+            <tbody id="userRows"><tr><td colspan="8" style="text-align:center;padding:28px;color:#94a3b8">Loading users...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -229,6 +249,7 @@ function showDash() {
   document.getElementById('dash').style.display = 'block';
   startTimers(token);
   loadKeys();
+  loadUsers();
   syncPrice();
 }
 
@@ -266,15 +287,16 @@ async function createKey() {
   if (!document.getElementById('clientName').value.trim()) return toast('Client name required', true);
   try {
     const body = {
-      clientName:   document.getElementById('clientName').value,
-      clientEmail:  document.getElementById('clientEmail').value,
-      clientMobile: document.getElementById('clientMobile').value,
-      duration:     document.getElementById('duration').value,
+      clientName:   document.getElementById('clientName').value.trim(),
+      clientEmail:  document.getElementById('clientEmail').value.trim(),
+      clientMobile: document.getElementById('clientMobile').value.trim(),
+      plan:         document.getElementById('duration').value,
       customDays:   Number(document.getElementById('customDays').value || 0),
       maxUsers:     Number(document.getElementById('maxUsers').value || 1),
       price:        document.getElementById('price').value,
       notes:        document.getElementById('notes').value
     };
+    if (!body.plan) return toast('Please select a plan', true);
     const data = await api('/api/admin/licenses', { method:'POST', body: JSON.stringify(body) });
     lastCreated = data.license;
     document.getElementById('newKey').textContent  = lastCreated.key;
@@ -388,20 +410,35 @@ function copyText(t) { navigator.clipboard.writeText(t).then(() => toast('Copied
 function copyWhatsApp() {
   if (!lastCreated) return;
   copyText(
-    `Namaste! Your PF & ESI Manager Pro license key is ready.\n\n` +
-    `Key: ${lastCreated.key}\n` +
-    `Plan: ${planLabels[lastCreated.plan]||lastCreated.plan}\n` +
-    `Valid until: ${fmtDate(lastCreated.expiresAt)}\n\n` +
-    `Open the app and enter this key to activate.`
+    `Namaste! 🎯 Your LeadFlow OS license key is ready.\n\n` +
+    `🔑 Key: ${lastCreated.key}\n` +
+    `📋 Plan: ${planLabels[lastCreated.plan]||lastCreated.plan}\n` +
+    `📅 Valid until: ${fmtDate(lastCreated.expiresAt)}\n` +
+    `👥 Max Users: ${lastCreated.maxUsers||1}\n\n` +
+    `To activate:\n` +
+    `1. Open https://leadflow-crm-india.onrender.com/app\n` +
+    `2. Register with your email\n` +
+    `3. Enter this key when prompted\n\n` +
+    `Thank you! 🚀`
   );
 }
 function copyEmail() {
   if (!lastCreated) return;
   copyText(
-    `Subject: PF & ESI Manager Pro License Key\n\nDear Client,\n\n` +
-    `Your license key is: ${lastCreated.key}\n` +
-    `Plan: ${planLabels[lastCreated.plan]||lastCreated.plan}\n` +
-    `Valid until: ${fmtDate(lastCreated.expiresAt)}\n\nRegards`
+    `Subject: LeadFlow OS License Key — ${planLabels[lastCreated.plan]||lastCreated.plan} Plan\n\n` +
+    `Dear ${lastCreated.clientName||'Client'},\n\n` +
+    `Your LeadFlow OS license key has been activated.\n\n` +
+    `🔑 License Key : ${lastCreated.key}\n` +
+    `📋 Plan        : ${planLabels[lastCreated.plan]||lastCreated.plan}\n` +
+    `📅 Valid Until : ${fmtDate(lastCreated.expiresAt)}\n` +
+    `👥 Max Users   : ${lastCreated.maxUsers||1}\n\n` +
+    `To get started:\n` +
+    `1. Visit: https://leadflow-crm-india.onrender.com/app\n` +
+    `2. Register with your email address\n` +
+    `3. Enter your license key when prompted\n\n` +
+    `For support, contact: contactadmin11@gmail.com\n\n` +
+    `Thank you for choosing LeadFlow OS!\n` +
+    `Team LeadFlow`
   );
 }
 

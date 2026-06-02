@@ -47,7 +47,7 @@ router.post('/licenses', async (req, res, next) => {
     const { clientName, clientEmail, clientMobile, plan, maxUsers, price, notes } = req.body;
     if (!clientName || !plan) return res.status(400).json({ error: 'clientName and plan required' });
 
-    const PLAN_DAYS = { trial: 14, '1month': 30, '3months': 90, '6months': 180, '1year': 365, custom: parseInt(req.body.customDays) || 30 };
+    const PLAN_DAYS = { trial: 7, '1month': 30, '3months': 90, '6months': 180, '1year': 365, custom: parseInt(req.body.customDays) || 30 };
     const days    = PLAN_DAYS[plan] || 30;
     const expires = new Date();
     expires.setDate(expires.getDate() + days);

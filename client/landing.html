@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LeadFlow OS — Automation-First CRM for Growing Businesses</title>
-<meta name="description" content="LeadFlow OS is a powerful CRM with WhatsApp automation, GST invoicing, AI assistant, and pipeline management. Start your 14-day free trial today.">
+<meta name="description" content="LeadFlow OS is a powerful CRM with WhatsApp automation, GST invoicing, AI assistant, and pipeline management. Start your 7-day free trial today.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -105,6 +105,22 @@ section{padding:96px 24px}
 .btn-plan.outline:hover{border-color:var(--accent);color:var(--accent)}
 .price-note{text-align:center;margin-top:32px;font-size:13px;color:var(--text2)}
 .price-note i{color:var(--green);margin-right:4px}
+.price-original{font-size:16px;color:var(--text2);text-decoration:line-through;margin-right:8px;font-weight:400}
+.price-discount{display:inline-block;padding:2px 8px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:12px;font-size:11px;font-weight:700;color:#f87171;margin-left:6px}
+.extra-user-note{font-size:12px;color:var(--text2);margin-bottom:20px;padding:8px 12px;background:rgba(59,130,246,.05);border-radius:8px;border:1px solid rgba(59,130,246,.1)}
+
+/* Buy Inquiry Modal */
+.buy-modal{background:#0d1526;border:1px solid var(--border);border-radius:24px;padding:40px;width:100%;max-width:480px;animation:fadeUp .3s ease;position:relative;max-height:90vh;overflow-y:auto}
+.buy-modal h2{font-size:22px;font-weight:800;margin-bottom:6px}
+.buy-modal .plan-badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;margin-bottom:20px}
+.buy-input{width:100%;padding:12px 14px;background:rgba(255,255,255,.05);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;margin-bottom:12px;transition:.2s;outline:none}
+.buy-input:focus{border-color:var(--accent)}
+.buy-input::placeholder{color:var(--text2)}
+.buy-select{width:100%;padding:12px 14px;background:#0d1526;border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;margin-bottom:12px;outline:none}
+.buy-btn{width:100%;padding:14px;background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:.2s;font-family:'Inter',sans-serif}
+.buy-btn:hover{transform:translateY(-1px);box-shadow:0 8px 25px rgba(59,130,246,.4)}
+.buy-success{text-align:center;padding:20px 0}
+.buy-success .checkmark{font-size:56px;margin-bottom:16px}
 
 /* ── TESTIMONIALS ── */
 .testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;max-width:1100px;margin:0 auto}
@@ -197,13 +213,13 @@ footer{padding:48px 40px;border-top:1px solid var(--border);display:flex;justify
   <p class="hero-sub">LeadFlow OS is an automation-first CRM with WhatsApp messaging, GST invoicing, AI assistant, and pipeline management — built for Indian businesses.</p>
   <div class="hero-btns">
     <button class="btn-hero primary" onclick="showAuthModal('register')">
-      <i class="fas fa-rocket"></i> Start Free 14-Day Trial
+      <i class="fas fa-rocket"></i> Start Free 7-Day Trial
     </button>
     <button class="btn-hero ghost" onclick="document.getElementById('pricing').scrollIntoView({behavior:'smooth'})">
       <i class="fas fa-tag"></i> View Pricing
     </button>
   </div>
-  <p class="hero-note"><i class="fas fa-check-circle"></i> No credit card required &nbsp;·&nbsp; <i class="fas fa-check-circle"></i> Cancel anytime &nbsp;·&nbsp; <i class="fas fa-check-circle"></i> Free 14 days</p>
+  <p class="hero-note"><i class="fas fa-check-circle"></i> No credit card required &nbsp;·&nbsp; <i class="fas fa-check-circle"></i> Cancel anytime &nbsp;·&nbsp; <i class="fas fa-check-circle"></i> Free 7 days</p>
 </section>
 
 <!-- ── STATS ── -->
@@ -290,7 +306,7 @@ footer{padding:48px 40px;border-top:1px solid var(--border);display:flex;justify
     <div class="step">
       <div class="step-num">1</div>
       <h3>Sign Up Free</h3>
-      <p>Create your account. 14-day trial starts immediately. No credit card needed.</p>
+      <p>Create your account. 7-day trial starts immediately. No credit card needed.</p>
     </div>
     <div class="step">
       <div class="step-num">2</div>
@@ -315,16 +331,17 @@ footer{padding:48px 40px;border-top:1px solid var(--border);display:flex;justify
   <div class="center">
     <div class="section-label">Transparent Pricing</div>
     <h2 class="section-title">Choose Your <span style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Plan</span></h2>
-    <p class="section-sub">Start free for 14 days. No credit card required. Cancel anytime.</p>
+    <p class="section-sub">Start free for 7 days. No credit card required. Cancel anytime.</p>
   </div>
 
   <div class="pricing-grid reveal">
     <!-- Monthly -->
     <div class="price-card">
       <div class="price-plan">Monthly</div>
-      <div class="price-amount"><sup>₹</sup>499</div>
+      <div class="price-amount"><sup>₹</sup>299 <span class="price-original">₹499</span><span class="price-discount">40% OFF</span></div>
       <div class="price-period">per month, billed monthly</div>
-      <div style="height:26px"></div>
+      <div style="height:8px"></div>
+      <p class="extra-user-note">👤 ₹149/month per extra user (add more devices)</p>
       <ul class="price-features">
         <li><i class="fas fa-check"></i> Unlimited Leads & Clients</li>
         <li><i class="fas fa-check"></i> GST Invoicing & Quotes</li>
@@ -335,16 +352,17 @@ footer{padding:48px 40px;border-top:1px solid var(--border);display:flex;justify
         <li><i class="fas fa-check"></i> Reports & Analytics</li>
         <li><i class="fas fa-check"></i> Cloud Backup</li>
       </ul>
-      <button class="btn-plan outline" onclick="startCheckout('monthly')">Get Started</button>
+      <button class="btn-plan outline" onclick="openBuyModal('monthly','₹299/month')">&nbsp;Get Started&nbsp;</button>
     </div>
 
     <!-- Quarterly (Popular) -->
     <div class="price-card popular">
       <div class="popular-badge">🔥 Most Popular</div>
       <div class="price-plan">Quarterly</div>
-      <div class="price-amount"><sup>₹</sup>1,299</div>
-      <div class="price-period">per quarter (₹433/mo)</div>
-      <div class="price-save">Save ₹198 vs Monthly</div>
+      <div class="price-amount"><sup>₹</sup>749 <span class="price-original">₹1,299</span><span class="price-discount">42% OFF</span></div>
+      <div class="price-period">per quarter (₹250/mo)</div>
+      <div class="price-save">Save ₹550 vs Monthly — Limited Offer!</div>
+      <p class="extra-user-note">👤 ₹149/month per extra user (add more devices)</p>
       <ul class="price-features">
         <li><i class="fas fa-check"></i> Everything in Monthly</li>
         <li><i class="fas fa-check"></i> Priority Email Support</li>
@@ -355,15 +373,16 @@ footer{padding:48px 40px;border-top:1px solid var(--border);display:flex;justify
         <li><i class="fas fa-check"></i> Client Portal (coming soon)</li>
         <li><i class="fas fa-check"></i> Early Access to Features</li>
       </ul>
-      <button class="btn-plan primary" onclick="startCheckout('quarterly')">Get Started</button>
+      <button class="btn-plan primary" onclick="openBuyModal('quarterly','₹749/quarter')">Get Started</button>
     </div>
 
     <!-- Yearly -->
     <div class="price-card">
       <div class="price-plan">Yearly</div>
-      <div class="price-amount"><sup>₹</sup>3,999</div>
-      <div class="price-period">per year (₹333/mo)</div>
-      <div class="price-save">Save ₹1,989 vs Monthly</div>
+      <div class="price-amount"><sup>₹</sup>2,900 <span class="price-original">₹3,999</span><span class="price-discount">27% OFF</span></div>
+      <div class="price-period">per year (₹242/mo)</div>
+      <div class="price-save">Save ₹1,099 — Best Annual Deal!</div>
+      <p class="extra-user-note">👤 ₹149/month per extra user (add more devices)</p>
       <ul class="price-features">
         <li><i class="fas fa-check"></i> Everything in Quarterly</li>
         <li><i class="fas fa-check"></i> Dedicated Support</li>
@@ -374,30 +393,11 @@ footer{padding:48px 40px;border-top:1px solid var(--border);display:flex;justify
         <li><i class="fas fa-check"></i> 2 Free Onboarding Calls</li>
         <li><i class="fas fa-check"></i> Invoice Customization</li>
       </ul>
-      <button class="btn-plan outline" onclick="startCheckout('yearly')">Get Started</button>
-    </div>
-
-    <!-- Lifetime -->
-    <div class="price-card" style="border-color:var(--orange);background:linear-gradient(160deg,rgba(245,158,11,.05),var(--card))">
-      <div class="price-plan" style="color:var(--orange)">Lifetime</div>
-      <div class="price-amount" style="background:linear-gradient(135deg,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent"><sup style="-webkit-text-fill-color:inherit">₹</sup>9,999</div>
-      <div class="price-period">one-time, forever</div>
-      <div class="price-save" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#fbbf24">Best Value — Pay Once</div>
-      <ul class="price-features">
-        <li><i class="fas fa-check"></i> Everything, Forever</li>
-        <li><i class="fas fa-check"></i> All Future Features</li>
-        <li><i class="fas fa-check"></i> Priority Support Forever</li>
-        <li><i class="fas fa-check"></i> White-label License</li>
-        <li><i class="fas fa-check"></i> Reseller Rights</li>
-        <li><i class="fas fa-check"></i> Unlimited Team Members</li>
-        <li><i class="fas fa-check"></i> Custom Branding</li>
-        <li><i class="fas fa-check"></i> 5 Onboarding Calls</li>
-      </ul>
-      <button class="btn-plan primary" style="background:linear-gradient(135deg,#f59e0b,#ef4444)" onclick="startCheckout('lifetime')">Buy Lifetime Access</button>
+      <button class="btn-plan outline" onclick="openBuyModal('yearly','₹2,900/year')">Get Started</button>
     </div>
   </div>
 
-  <p class="price-note"><i class="fas fa-shield-alt"></i> 7-day money-back guarantee &nbsp;·&nbsp; <i class="fas fa-lock"></i> Secure payments via Razorpay &nbsp;·&nbsp; <i class="fas fa-receipt"></i> GST Invoice provided</p>
+  <p class="price-note"><i class="fas fa-shield-alt"></i> 7-day money-back guarantee &nbsp;·&nbsp; <i class="fas fa-headset"></i> WhatsApp support &nbsp;·&nbsp; <i class="fas fa-receipt"></i> GST Invoice provided</p>
 </section>
 
 <!-- ── TESTIMONIALS ── -->
@@ -476,9 +476,9 @@ footer{padding:48px 40px;border-top:1px solid var(--border);display:flex;justify
   <h2>Ready to Grow Your Business?</h2>
   <p>Join 500+ Indian businesses using LeadFlow OS. Start your free trial today.</p>
   <button class="btn-hero primary" onclick="showAuthModal('register')" style="font-size:18px;padding:18px 48px">
-    <i class="fas fa-rocket"></i> Start Free 14-Day Trial
+    <i class="fas fa-rocket"></i> Start Free 7-Day Trial
   </button>
-  <p style="margin-top:16px;font-size:13px;color:var(--text2)">No credit card required · Cancel anytime · ₹499/month after trial</p>
+  <p style="margin-top:16px;font-size:13px;color:var(--text2)">No credit card required · Cancel anytime · ₹299/month after trial</p>
 </div>
 
 <!-- ── FOOTER ── -->
@@ -510,14 +510,14 @@ footer{padding:48px 40px;border-top:1px solid var(--border);display:flex;justify
       Subscribe to continue using LeadFlow OS and keep all your data.
     </p>
     <div style="display:grid;gap:10px">
-      <button class="auth-btn" onclick="startCheckout('quarterly')" style="font-size:16px;padding:16px">
-        <i class="fas fa-bolt"></i> &nbsp;₹1,299 / Quarter — Most Popular
+      <button class="auth-btn" onclick="openBuyModal('quarterly','₹749/quarter')" style="font-size:16px;padding:16px">
+        <i class="fas fa-bolt"></i> &nbsp;₹749 / Quarter — Most Popular <span style="font-size:11px;opacity:.7;text-decoration:line-through">₹1,299</span>
       </button>
-      <button class="auth-btn" onclick="startCheckout('monthly')" style="background:none;border:1.5px solid var(--border);font-size:14px;padding:13px">
-        ₹499 / Month
+      <button class="auth-btn" onclick="openBuyModal('monthly','₹299/month')" style="background:none;border:1.5px solid var(--border);font-size:14px;padding:13px">
+        ₹299 / Month <span style="font-size:11px;opacity:.6;text-decoration:line-through">₹499</span>
       </button>
-      <button class="auth-btn" onclick="startCheckout('yearly')" style="background:linear-gradient(135deg,#10b981,#059669);font-size:14px;padding:13px">
-        ₹3,999 / Year — Best Value
+      <button class="auth-btn" onclick="openBuyModal('yearly','₹2,900/year')" style="background:linear-gradient(135deg,#10b981,#059669);font-size:14px;padding:13px">
+        ₹2,900 / Year — Best Value <span style="font-size:11px;opacity:.7;text-decoration:line-through">₹3,999</span>
       </button>
     </div>
     <p style="font-size:12px;color:var(--text2);margin-top:16px"><i class="fas fa-shield-alt"></i> 7-day money-back guarantee</p>
@@ -537,9 +537,9 @@ document.getElementById('authModalOverlay').onclick = function(e){ if(e.target==
 function renderAuthModal(mode) {
   const isLogin = mode === 'login';
   document.getElementById('authModalContent').innerHTML = `
-    <div class="trial-badge"><i class="fas fa-gift"></i> 14 Days Free — No Card Needed</div>
+    <div class="trial-badge"><i class="fas fa-gift"></i> 7 Days Free — No Card Needed</div>
     <h2>${isLogin ? 'Welcome Back' : 'Create Your Account'}</h2>
-    <p class="sub">${isLogin ? 'Sign in to your LeadFlow dashboard' : 'Start your free 14-day trial instantly'}</p>
+    <p class="sub">${isLogin ? 'Sign in to your LeadFlow dashboard' : 'Start your free 7-day trial instantly'}</p>
     ${!isLogin ? `<input class="auth-input" id="authName" placeholder="Your Full Name" autocomplete="name">` : ''}
     <input class="auth-input" id="authEmail" type="email" placeholder="Email Address" autocomplete="email">
     <input class="auth-input" id="authPass" type="password" placeholder="Password ${isLogin?'':' (min 8 characters)'}" autocomplete="${isLogin?'current-password':'new-password'}">
@@ -597,52 +597,105 @@ function _postLogin(data) {
   window.location.href = '/index.html';
 }
 
-// ── Checkout (Razorpay) ──────────────────────────────────────────────────────
-async function startCheckout(plan) {
-  if (!API.isLoggedIn()) { showAuthModal('register'); return; }
-  try {
-    // Get Razorpay key + create order
-    const plansData = await API.get('/subscription/plans');
-    const rzpKey    = plansData.razorpayKey;
-    if (!rzpKey) {
-      alert('Payment gateway not configured yet. Contact support.'); return;
-    }
-    const orderData = await API.post('/subscription/create-order', { plan });
+// ── Buy Inquiry Modal ────────────────────────────────────────────────────────
+function openBuyModal(plan, price) {
+  const planLabels = { monthly:'Monthly', quarterly:'Quarterly', yearly:'Yearly' };
+  const planName = planLabels[plan] || plan;
+  // Pre-fill email if logged in
+  const userEmail = (typeof API !== 'undefined' && API.getUser) ? (API.getUser()?.email || '') : '';
 
-    const options = {
-      key:         rzpKey,
-      amount:      orderData.amount,
-      currency:    'INR',
-      name:        'LeadFlow OS',
-      description: orderData.label,
-      order_id:    orderData.orderId,
-      prefill: {
-        email: API.getUser()?.email || ''
-      },
-      theme:       { color: '#3b82f6' },
-      handler: async function(response) {
-        try {
-          const result = await API.post('/subscription/verify', {
-            razorpay_order_id:   response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature:  response.razorpay_signature,
-            plan
-          });
-          closePaywall();
-          alert('🎉 ' + result.message + '\n\nWelcome to LeadFlow OS!');
-          window.location.href = '/index.html';
-        } catch(e) { alert('Payment verification failed: ' + e.message); }
-      }
-    };
-    const rzp = new Razorpay(options);
-    rzp.open();
-  } catch(e) {
-    if(e.message?.includes('subscription_required') || e.message?.includes('401')) {
-      showAuthModal('register');
-    } else {
-      alert('Error: ' + e.message);
-    }
+  // Create modal if not exists
+  let overlay = document.getElementById('buyModalOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'buyModalOverlay';
+    overlay.innerHTML = `<div class="buy-modal" id="buyModalBox"><button class="modal-close-btn" onclick="closeBuyModal()">×</button><div id="buyModalContent"></div></div>`;
+    overlay.onclick = function(e){ if(e.target===this) closeBuyModal(); };
+    document.body.appendChild(overlay);
   }
+
+  document.getElementById('buyModalContent').innerHTML = `
+    <div class="plan-badge">📦 ${planName} Plan — ${price}</div>
+    <h2 style="margin-bottom:6px">Complete Your Order</h2>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:20px">Fill in your details and we'll contact you within 2 hours to activate your account.</p>
+    <input class="buy-input" id="buyName" placeholder="Your Full Name *" required>
+    <input class="buy-input" id="buyEmail" type="email" placeholder="Email Address *" value="${userEmail}" required>
+    <input class="buy-input" id="buyMobile" type="tel" placeholder="Mobile / WhatsApp Number *" required>
+    <select class="buy-select" id="buyPlan">
+      <option value="Monthly — ₹299/month" ${plan==='monthly'?'selected':''}>Monthly — ₹299/month (was ₹499)</option>
+      <option value="Quarterly — ₹749/quarter" ${plan==='quarterly'?'selected':''}>Quarterly — ₹749/quarter (was ₹1,299)</option>
+      <option value="Yearly — ₹2,900/year" ${plan==='yearly'?'selected':''}>Yearly — ₹2,900/year (was ₹3,999)</option>
+    </select>
+    <input class="buy-input" id="buyUsers" type="number" min="1" max="20" placeholder="No. of users (extra users ₹149/month each)" value="1">
+    <input class="buy-input" id="buyGst" placeholder="GST Number (optional, for GST invoice)">
+    <div id="buyErr" style="color:#f87171;font-size:13px;margin-bottom:10px;display:none"></div>
+    <button class="buy-btn" id="buySubmitBtn" onclick="submitBuyForm()">
+      <i class="fas fa-paper-plane"></i> Send Inquiry — We'll Contact You!
+    </button>
+    <p style="font-size:11px;color:var(--text2);text-align:center;margin-top:12px">🔒 Your details are safe. We'll WhatsApp/call you within 2 hours.</p>
+  `;
+  overlay.classList.add('show');
+}
+
+function closeBuyModal() {
+  const overlay = document.getElementById('buyModalOverlay');
+  if (overlay) overlay.classList.remove('show');
+}
+
+function submitBuyForm() {
+  const name    = document.getElementById('buyName')?.value?.trim();
+  const email   = document.getElementById('buyEmail')?.value?.trim();
+  const mobile  = document.getElementById('buyMobile')?.value?.trim();
+  const plan    = document.getElementById('buyPlan')?.value;
+  const users   = document.getElementById('buyUsers')?.value || '1';
+  const gst     = document.getElementById('buyGst')?.value?.trim();
+  const errEl   = document.getElementById('buyErr');
+  const btn     = document.getElementById('buySubmitBtn');
+
+  if (!name)   { errEl.textContent='Please enter your name'; errEl.style.display='block'; return; }
+  if (!email)  { errEl.textContent='Please enter your email'; errEl.style.display='block'; return; }
+  if (!mobile) { errEl.textContent='Please enter your mobile number'; errEl.style.display='block'; return; }
+  errEl.style.display = 'none';
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+  const subject = encodeURIComponent(`LeadFlow OS Purchase Inquiry — ${plan}`);
+  const body = encodeURIComponent(
+    `New Purchase Inquiry — LeadFlow OS\n` +
+    `================================\n` +
+    `Name    : ${name}\n` +
+    `Email   : ${email}\n` +
+    `Mobile  : ${mobile}\n` +
+    `Plan    : ${plan}\n` +
+    `Users   : ${users} user(s)\n` +
+    `GST No. : ${gst || 'Not provided'}\n` +
+    `================================\n` +
+    `Sent from LeadFlow OS landing page`
+  );
+
+  // Open mailto to send inquiry to admin
+  window.open(`mailto:contactadmin11@gmail.com?subject=${subject}&body=${body}`, '_blank');
+
+  // Show success
+  setTimeout(() => {
+    document.getElementById('buyModalContent').innerHTML = `
+      <div class="buy-success">
+        <div class="checkmark">✅</div>
+        <h2>Inquiry Sent!</h2>
+        <p style="color:var(--text2);margin:12px 0 8px;line-height:1.6">Thank you <strong>${name}</strong>!<br>We'll contact you on <strong>${mobile}</strong> within <strong>2 hours</strong> to activate your account.</p>
+        <p style="font-size:13px;color:var(--text2)">Also check your email for confirmation.</p>
+        <button class="buy-btn" style="margin-top:20px" onclick="closeBuyModal()">Close</button>
+      </div>
+    `;
+  }, 800);
+}
+
+// Keep old startCheckout for paywall compatibility
+function startCheckout(plan) {
+  const priceMap = { monthly:'₹299/month', quarterly:'₹749/quarter', yearly:'₹2,900/year' };
+  openBuyModal(plan, priceMap[plan] || '');
 }
 
 // ── Paywall ──────────────────────────────────────────────────────────────────
