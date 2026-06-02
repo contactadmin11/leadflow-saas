@@ -658,38 +658,28 @@ function submitBuyForm() {
   if (!mobile) { errEl.textContent='Please enter your mobile number'; errEl.style.display='block'; return; }
   errEl.style.display = 'none';
 
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+  btn.innerHTML = '<i class="fas fa-check"></i> Details Saved';
 
-  const subject = encodeURIComponent(`LeadFlow OS Purchase Inquiry — ${plan}`);
-  const body = encodeURIComponent(
-    `New Purchase Inquiry — LeadFlow OS\n` +
-    `================================\n` +
-    `Name    : ${name}\n` +
-    `Email   : ${email}\n` +
-    `Mobile  : ${mobile}\n` +
-    `Plan    : ${plan}\n` +
-    `Users   : ${users} user(s)\n` +
-    `GST No. : ${gst || 'Not provided'}\n` +
-    `================================\n` +
-    `Sent from LeadFlow OS landing page`
-  );
-
-  // Open mailto to send inquiry to admin
-  window.open(`mailto:contactadmin11@gmail.com?subject=${subject}&body=${body}`, '_blank');
-
-  // Show success
+  // Show instructions
   setTimeout(() => {
     document.getElementById('buyModalContent').innerHTML = `
       <div class="buy-success">
-        <div class="checkmark">✅</div>
-        <h2>Inquiry Sent!</h2>
-        <p style="color:var(--text2);margin:12px 0 8px;line-height:1.6">Thank you <strong>${name}</strong>!<br>We'll contact you on <strong>${mobile}</strong> within <strong>2 hours</strong> to activate your account.</p>
-        <p style="font-size:13px;color:var(--text2)">Also check your email for confirmation.</p>
-        <button class="buy-btn" style="margin-top:20px" onclick="closeBuyModal()">Close</button>
+        <h2 style="margin-bottom:12px;color:var(--accent)">Almost Done!</h2>
+        <p style="color:var(--text2);margin-bottom:16px;line-height:1.6;font-size:14px">
+          Please message your details below to <strong style="color:var(--text)">contactadmin11@gmail.com</strong> to complete the purchase and activate your account.
+        </p>
+        <div style="background:rgba(255,255,255,0.05);padding:16px;border-radius:12px;text-align:left;font-family:monospace;font-size:13px;color:var(--text2);margin-bottom:20px;border:1px solid var(--border)">
+          Name: ${name}<br>
+          Email: ${email}<br>
+          Mobile: ${mobile}<br>
+          Plan: ${plan}<br>
+          Users: ${users}<br>
+          GST: ${gst || 'Not provided'}
+        </div>
+        <button class="buy-btn" onclick="closeBuyModal()">Close</button>
       </div>
     `;
-  }, 800);
+  }, 400);
 }
 
 // Keep old startCheckout for paywall compatibility
