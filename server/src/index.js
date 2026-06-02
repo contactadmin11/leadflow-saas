@@ -11,6 +11,7 @@ const rateLimit  = require('express-rate-limit');
 const mongoose   = require('mongoose');
 const path       = require('path');
 const fs         = require('fs');
+const JavaScriptObfuscator = require('javascript-obfuscator');
 
 const logger          = require('./config/logger');
 const authRoutes      = require('./routes/auth.routes');
@@ -147,6 +148,47 @@ app.get(['/admin.html', '/admin'], (req, res) => {
 // ── Serve frontend — inject APP_SECRET at serve time ─────────────────────────
 if (fs.existsSync(clientPath)) {
   const APP_SECRET = process.env.APP_SECRET || '';
+
+  // In-memory cache for obfuscated files
+  const obfuscatedCache = {};
+
+  // Obfuscate JS files on the fly in production
+  app.get('/js/:file', (req, res, next) => {
+    if (process.env.NODE_ENV !== 'production') return next();
+    
+    const filename = req.params.file;
+    if (!filename.endsWith('.js')) return next();
+    
+    if (obfuscatedCache[filename]) {
+      res.setHeader('Content-Type', 'application/javascript');
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      return res.send(obfuscatedCache[filename]);
+    }
+    
+    const filepath = path.join(clientPath, 'js', filename);
+    if (fs.existsSync(filepath)) {
+      try {
+        const code = fs.readFileSync(filepath, 'utf8');
+        const obfuscationResult = JavaScriptObfuscator.obfuscate(code, {
+          compact: true,
+          controlFlowFlattening: true,
+          deadCodeInjection: false,
+          debugProtection: false,
+          disableConsoleOutput: true,
+          stringArray: true,
+          stringArrayEncoding: ['base64'],
+        });
+        obfuscatedCache[filename] = obfuscationResult.getObfuscatedCode();
+        res.setHeader('Content-Type', 'application/javascript');
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+        return res.send(obfuscatedCache[filename]);
+      } catch(err) {
+        logger.error('Obfuscation error for ' + filename + ': ' + err.message);
+        return next();
+      }
+    }
+    next();
+  });
 
   // Serve all static assets (JS, CSS, images) without index
   app.use(express.static(clientPath, { index: false }));

@@ -456,6 +456,67 @@ function exportCSV() {
   a.click();
 }
 
+// ─── Registered Users ─────────────────────────────────────────────────────────
+let appUsers = [];
+async function loadUsers() {
+  try {
+    const data = await api('/api/admin/users-devices');
+    appUsers = data.users || [];
+    document.getElementById('statUsers').textContent = appUsers.length;
+    renderUsers();
+  } catch(e) { 
+    if (e.message !== 'Unauthorized') toast(e.message, true); 
+    document.getElementById('userRows').innerHTML = '<tr><td colspan="8" style="text-align:center;color:#fca5a5">Failed to load users</td></tr>';
+  }
+}
+
+function renderUsers() {
+  const q = document.getElementById('userSearch').value.toLowerCase();
+  const list = appUsers.filter(u => 
+    !q || [u.name, u.email].join(' ').toLowerCase().includes(q)
+  );
+  document.getElementById('userRows').innerHTML = list.length
+    ? list.map((u, i) => {
+        const sub = u.subscription;
+        const maxDev = sub ? sub.maxDevices : 1;
+        const subText = sub ? `${planLabels[sub.plan]||sub.plan} (${sub.status.toUpperCase()})` : 'None';
+        return `<tr>
+          <td>${i+1}</td>
+          <td><b>${esc(u.name)}</b></td>
+          <td>${esc(u.email)}</td>
+          <td>${u.role}</td>
+          <td><span class="badge ${u.isActive?'active-b':'revoked-b'}">${u.isActive?'ACTIVE':'INACTIVE'}</span></td>
+          <td>${fmtDate(u.createdAt)}</td>
+          <td>${fmtDate(u.lastLoginAt)}</td>
+          <td>${subText}</td>
+          <td>
+            <div class="row-actions">
+              <button class="blue btn-sm" onclick="changeDeviceCount('${u._id}', ${maxDev})">Max Devices: ${maxDev}</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="9" style="text-align:center;padding:28px;color:#94a3b8">No users found</td></tr>';
+}
+
+async function changeDeviceCount(userId, currentMax) {
+  const newMax = prompt('Enter new maximum allowed devices for this user:', currentMax);
+  if (newMax === null || newMax === '') return;
+  const num = parseInt(newMax);
+  if (isNaN(num) || num < 1) return alert('Invalid number');
+  
+  try {
+    await api(`/api/admin/users/${userId}/max-devices`, {
+      method: 'PUT',
+      body: JSON.stringify({ maxDevices: num })
+    });
+    toast('Device limit updated ✅');
+    loadUsers();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
 // ─── Toast ────────────────────────────────────────────────────────────────────
 function toast(msg, err) {
   const t = document.getElementById('toast');
