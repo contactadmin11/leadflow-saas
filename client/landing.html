@@ -536,6 +536,37 @@ document.getElementById('authModalOverlay').onclick = function(e){ if(e.target==
 
 function renderAuthModal(mode) {
   const isLogin = mode === 'login';
+  const isOtp   = mode === 'otp';
+  
+  if (isOtp) {
+    document.getElementById('authModalContent').innerHTML = `
+      <div class="trial-badge"><i class="fas fa-mobile-alt"></i> Fast & Secure Login</div>
+      <h2>Login via OTP</h2>
+      <p class="sub">Enter your registered mobile number</p>
+      <div id="otpStep1">
+        <input class="auth-input" id="authMobile" type="tel" placeholder="Mobile Number (e.g. 9876543210)">
+        <div class="auth-err" id="authErr"></div>
+        <button class="auth-btn" id="sendOtpBtn" onclick="doSendOtp()">
+          <i class="fas fa-paper-plane"></i> Send OTP
+        </button>
+      </div>
+      <div id="otpStep2" style="display:none">
+        <p style="font-size:13px;color:#059669;margin-bottom:10px;font-weight:600"><i class="fas fa-check-circle"></i> OTP Sent successfully!</p>
+        <input class="auth-input" id="authOtpCode" type="text" placeholder="Enter 6-digit OTP" maxlength="6">
+        <div class="auth-err" id="authErr2"></div>
+        <button class="auth-btn" id="verifyOtpBtn" onclick="doVerifyOtp()">
+          <i class="fas fa-sign-in-alt"></i> Verify & Login
+        </button>
+      </div>
+      <div id="recaptcha-container"></div>
+      <div class="auth-switch">
+        <a onclick="renderAuthModal('login')" style="cursor:pointer;color:#3b82f6;text-decoration:underline">← Back to Password Login</a>
+      </div>
+    `;
+    setTimeout(()=>document.getElementById('authMobile')?.focus(),100);
+    return;
+  }
+
   document.getElementById('authModalContent').innerHTML = `
     <div class="trial-badge"><i class="fas fa-gift"></i> 7 Days Free — No Card Needed</div>
     <h2>${isLogin ? 'Welcome Back' : 'Create Your Account'}</h2>
@@ -547,6 +578,13 @@ function renderAuthModal(mode) {
     <button class="auth-btn" id="authSubmitBtn" onclick="${isLogin?'doAuthLogin()':'doAuthRegister()'}">
       <i class="fas fa-${isLogin?'sign-in-alt':'rocket'}"></i> ${isLogin?'Sign In':'Start Free Trial'}
     </button>
+    ${isLogin ? `
+      <div style="margin-top:12px">
+        <button class="auth-btn" style="background:#10b981;box-shadow:0 4px 12px rgba(16,185,129,0.3)" onclick="renderAuthModal('otp')">
+          <i class="fas fa-mobile-alt"></i> Login via OTP (Mobile)
+        </button>
+      </div>
+    ` : ''}
     <div class="auth-switch">${isLogin
       ? 'New here? <a onclick="renderAuthModal(\'register\')">Create free account →</a>'
       : 'Already have an account? <a onclick="renderAuthModal(\'login\')">Sign in →</a>'
@@ -726,7 +764,102 @@ if (API.isLoggedIn()) {
       <i class="fas fa-tachometer-alt"></i> Go to Dashboard
     </button>`;
 }
+}
+
+// ── FIREBASE OTP LOGIC ────────────────────────────────────────────────────────
+window.confirmationResult = null;
+
+function initFirebaseOTP() {
+  if (window.recaptchaVerifier) return;
+  try {
+    firebase.initializeApp({
+      apiKey: "AIzaSyAYxOwLQ444H_EnVlD_8dcDYcP6lSs3iPU",
+      authDomain: "lead-flow-74e12.firebaseapp.com",
+      projectId: "lead-flow-74e12",
+      storageBucket: "lead-flow-74e12.firebasestorage.app",
+      messagingSenderId: "987825746804",
+      appId: "1:987825746804:web:cba457f3ba0ded4676f221",
+    });
+    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+      'size': 'invisible'
+    });
+  } catch(e) { console.error('Firebase init error', e); }
+}
+
+async function doSendOtp() {
+  initFirebaseOTP();
+  const phoneInput = document.getElementById('authMobile');
+  let phone = phoneInput?.value?.trim();
+  const errEl = document.getElementById('authErr');
+  const btn = document.getElementById('sendOtpBtn');
+
+  if (!phone) { if(errEl){errEl.textContent='Enter your mobile number'; errEl.style.display='block';} return; }
+  
+  // Format phone number to E.164
+  if (!phone.startsWith('+')) {
+    if (phone.length === 10) phone = '+91' + phone;
+    else phone = '+' + phone;
+  }
+
+  if (errEl) errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending OTP...';
+
+  try {
+    window.confirmationResult = await firebase.auth().signInWithPhoneNumber(phone, window.recaptchaVerifier);
+    document.getElementById('otpStep1').style.display = 'none';
+    document.getElementById('otpStep2').style.display = 'block';
+    setTimeout(() => document.getElementById('authOtpCode')?.focus(), 100);
+  } catch (error) {
+    if (errEl) { errEl.textContent = error.message; errEl.style.display = 'block'; }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send OTP';
+  }
+}
+
+async function doVerifyOtp() {
+  const code = document.getElementById('authOtpCode')?.value?.trim();
+  const errEl = document.getElementById('authErr2');
+  const btn = document.getElementById('verifyOtpBtn');
+
+  if (!code || code.length < 6) { if(errEl){errEl.textContent='Enter valid 6-digit OTP'; errEl.style.display='block';} return; }
+
+  if (errEl) errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+
+  try {
+    // 1. Verify OTP with Firebase
+    const result = await window.confirmationResult.confirm(code);
+    // 2. Get ID Token
+    const idToken = await result.user.getIdToken();
+    
+    // 3. Send to our backend to create session
+    const res = await fetch(`${API.baseUrl}/auth/otp/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken, deviceInfo: {} })
+    });
+    const data = await res.json();
+    if (!data.accessToken) throw new Error(data.error || 'Login failed');
+
+    // 4. Finalize login
+    API.token = data.accessToken;
+    LS.set(KEYS.token, data.accessToken);
+    LS.set(KEYS.user, data.user);
+    if (data.subscription) LS.set(KEYS.sub, data.subscription);
+    
+    _postLogin(data);
+  } catch (error) {
+    if (errEl) { errEl.textContent = error.message || 'Invalid OTP'; errEl.style.display = 'block'; }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Verify & Login';
+  }
+}
 </script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 <!-- Razorpay SDK -->
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </body>

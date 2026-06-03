@@ -6,6 +6,9 @@ const userSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true, select: false },
   name:         { type: String, required: true, trim: true },
   role:         { type: String, enum: ['super_admin','admin','user','viewer'], default: 'user' },
+  mobile:       { type: String, trim: true },
+  otpLoginsToday: { type: Number, default: 0 },
+  lastOtpLoginDate: { type: String }, // Stored as YYYY-MM-DD
   isActive:     { type: Boolean, default: true },
   lastLoginAt:  { type: Date },
   deletedAt:    { type: Date, default: null }

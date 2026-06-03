@@ -27,7 +27,7 @@ const COOKIE_OPTS = {
   httpOnly:  true,    // JS cannot read this cookie
   secure:    process.env.NODE_ENV === 'production', // HTTPS only in production
   sameSite:  process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  maxAge:    30 * 24 * 60 * 60 * 1000,  // 30 days in ms
+  maxAge:    5 * 24 * 60 * 60 * 1000,  // 5 days in ms
   path:      '/'
 };
 
@@ -47,7 +47,7 @@ const signAccess  = (user) => jwt.sign(
 const signRefresh = (user) => jwt.sign(
   { id: user._id },
   process.env.JWT_REFRESH_SECRET,
-  { expiresIn: process.env.JWT_REFRESH_EXPIRES || '7d' }
+  { expiresIn: process.env.JWT_REFRESH_EXPIRES || '5d' }
 );
 
 // ── Helper: count active devices for a user ─────────────────────────────────
@@ -95,7 +95,7 @@ router.post('/register',
       const deviceInfo = getDeviceInfo(req, bodyDeviceInfo);
       const accessToken  = signAccess(user);
       const refreshToken = signRefresh(user);
-      const exp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const exp = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
 
       await Session.create({
         userId:            user._id,
@@ -188,7 +188,7 @@ router.post('/login',
 
       const accessToken  = signAccess(user);
       const refreshToken = signRefresh(user);
-      const exp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const exp = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
 
       await Session.create({
         userId:            user._id,
@@ -270,7 +270,7 @@ router.post('/refresh', async (req, res, next) => {
 
     const newAccess  = signAccess(user);
     const newRefresh = signRefresh(user);
-    const exp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const exp = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
 
     await Session.create({
       userId:            user._id,
@@ -292,6 +292,99 @@ router.post('/refresh', async (req, res, next) => {
     });
   } catch (err) { next(err); }
 });
+
+// ── OTP Login (Firebase Phone Auth) ──────────────────────────────────────────
+const axios = require('axios');
+const FIREBASE_KEYS_URL = 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
+
+router.post('/otp/login',
+  authLimiter,
+  [ body('idToken').notEmpty() ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { idToken, deviceInfo: bodyDeviceInfo } = req.body;
+      
+      const decodedHeader = jwt.decode(idToken, { complete: true });
+      if (!decodedHeader || !decodedHeader.header || !decodedHeader.header.kid) {
+        return res.status(401).json({ error: 'Invalid token format' });
+      }
+
+      const keysRes = await axios.get(FIREBASE_KEYS_URL);
+      const publicKey = keysRes.data[decodedHeader.header.kid];
+      if (!publicKey) return res.status(401).json({ error: 'Invalid token signature' });
+
+      const decodedToken = jwt.verify(idToken, publicKey, { algorithms: ['RS256'] });
+      
+      let phone = decodedToken.phone_number;
+      if (!phone) return res.status(400).json({ error: 'No phone number found in authentication token' });
+
+      const phoneRegex = new RegExp(phone.replace('+', '\\+?'), 'i');
+
+      const user = await User.findOne({ mobile: phoneRegex, deletedAt: null });
+      if (!user) {
+        return res.status(404).json({ error: `User with mobile ${phone} not found. Please register first or add this mobile number to your profile.` });
+      }
+
+      if (!user.isActive) return res.status(403).json({ error: 'Account deactivated. Contact support.' });
+
+      const today = new Date().toISOString().split('T')[0];
+      if (user.lastOtpLoginDate === today) {
+        if (user.otpLoginsToday >= 3) {
+          return res.status(429).json({ error: 'You have reached the maximum of 3 OTP logins for today. Please login with your password.' });
+        }
+        user.otpLoginsToday += 1;
+      } else {
+        user.lastOtpLoginDate = today;
+        user.otpLoginsToday = 1;
+      }
+      user.lastLoginAt = new Date();
+      await user.save();
+
+      const deviceInfo = getDeviceInfo(req, bodyDeviceInfo);
+      const fingerprint = deviceInfo.fingerprint;
+
+      const sub = await Subscription.findOne({ userId: user._id });
+      const maxDevices = sub?.maxDevices ?? 1;
+
+      if (maxDevices !== 0 && fingerprint) {
+        const activeSessions = await Session.find({ userId: user._id, revokedAt: null, expiresAt: { $gt: new Date() } });
+        const isKnownDevice = activeSessions.some(s => s.deviceFingerprint === fingerprint);
+        if (!isKnownDevice && activeSessions.length >= maxDevices) {
+          return res.status(403).json({
+            error: `Device limit reached (${maxDevices}/${maxDevices}). Please log out from another device first.`
+          });
+        }
+      }
+
+      const accessToken  = signAccess(user);
+      const refreshToken = signRefresh(user);
+      const exp = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+
+      await Session.create({
+        userId:            user._id,
+        refreshToken,
+        deviceFingerprint: deviceInfo.fingerprint,
+        deviceName:        deviceInfo.name,
+        deviceInfo,
+        ip:                req.ip,
+        expiresAt:         exp
+      });
+
+      res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTS);
+      await audit({ userId: user._id, action: 'LOGIN_OTP', resource: 'User', details: { mobile: phone }, req });
+
+      res.json({
+        accessToken,
+        user: { id: user._id, email: user.email, name: user.name, role: user.role, mobile: user.mobile },
+        subscription: { plan: sub?.plan || 'none', daysRemaining: 0 }
+      });
+    } catch (err) { 
+      if (err.name === 'TokenExpiredError') return res.status(401).json({ error: 'OTP Token has expired' });
+      next(err); 
+    }
+  }
+);
 
 // ── Logout (clears cookie + revokes session) ──────────────────────────────────
 router.post('/logout', protect, async (req, res, next) => {

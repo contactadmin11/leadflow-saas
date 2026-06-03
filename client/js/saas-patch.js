@@ -127,9 +127,27 @@ window.reconnectWANodeServer = async function() {
             <p style="margin-bottom:12px;font-weight:600">Scan this QR code with WhatsApp:</p>
             <img src="${result.qrBase64}" style="width:220px;height:220px;border-radius:12px;border:3px solid #3b82f6" alt="QR Code">
             <p style="margin-top:10px;font-size:12px;color:#64748b">WhatsApp → Settings → Linked Devices → Link Device</p>
+            <p style="margin-top:8px;font-size:12px;color:#f59e0b" id="waPollingMsg"><i class="fas fa-spinner fa-spin"></i> Waiting for scan...</p>
           </div>`;
       }
       if (typeof toast === 'function') toast('📱 Scan QR code to connect WhatsApp!', 'info', 8000);
+      
+      // Start polling
+      if (window.waPollInterval) clearInterval(window.waPollInterval);
+      let attempts = 0;
+      window.waPollInterval = setInterval(async () => {
+        attempts++;
+        if (attempts > 60) { clearInterval(window.waPollInterval); return; } // Timeout after 3 mins
+        try {
+          const status = await API.waStatus();
+          if (status.ready || status.status === 'connected') {
+            clearInterval(window.waPollInterval);
+            if (qrEl) qrEl.innerHTML = '<div style="color:#10b981;font-weight:bold;text-align:center;padding:20px"><i class="fas fa-check-circle" style="font-size:30px"></i><br>WhatsApp Connected!</div>';
+            checkWANodeServer(false);
+          }
+        } catch(e){}
+      }, 3000);
+
     } else if (result.status === 'connected') {
       if (typeof toast === 'function') toast('✅ WhatsApp already connected!', 'success');
       checkWANodeServer(false);
@@ -176,8 +194,21 @@ window._sendViaLocalServer = async function(phone, message, type, id, toEmail = 
 
   } catch (e) {
     console.error('[SaaS Patch] Send error:', e);
-    if (statusEl) statusEl.innerHTML = `<span style="color:#ef4444">❌ ${e.message}</span>`;
-    if (typeof toast === 'function') toast('Send failed: ' + e.message, 'error', 5000);
+    const isConfigError = e.message.toLowerCase().includes('phone number required') || e.message.toLowerCase().includes('not connected');
+    if (isConfigError) {
+      if (typeof toast === 'function') toast('❌ WhatsApp not connected. Scan QR code in settings to auto-attach PDFs!', 'error', 8000);
+      if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;font-weight:700">❌ WhatsApp not connected! PDF not attached.</span>';
+    } else {
+      if (statusEl) statusEl.innerHTML = `<span style="color:#ef4444">❌ ${e.message}</span>`;
+      if (typeof toast === 'function') toast('Send failed: ' + e.message, 'error', 5000);
+    }
+    
+    // Fallback to SameBrowser WA
+    if (channel === 'wa' || channel === 'both') {
+      if (typeof _sendViaSameBrowserWA === 'function') {
+         _sendViaSameBrowserWA(phone, message, type, docId || id);
+      }
+    }
   }
 };
 
@@ -205,7 +236,19 @@ window._sendEmailWithPDF = async function(email, name, subject, message, type, i
       throw new Error(result.error || 'Email send failed');
     }
   } catch(e) {
-    if (typeof toast === 'function') toast('Email failed: ' + e.message, 'error', 5000);
+    const isConfigError = e.message.toLowerCase().includes('gmail not configured') || e.message.toLowerCase().includes('settings not found');
+    if (isConfigError) {
+      if (typeof toast === 'function') toast('❌ Gmail not configured. Go to Settings -> Email Integration -> Enter Gmail & App Password.', 'error', 8000);
+      const statusEl = document.getElementById('sdPdfReady');
+      if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;font-weight:700">❌ Setup Gmail App Password in Settings first!</span>';
+    } else {
+      if (typeof toast === 'function') toast('Email failed: ' + e.message, 'error', 5000);
+    }
+    
+    // Fallback to local mailto
+    if (typeof _autoDownloadPDF === 'function') _autoDownloadPDF();
+    window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`, '_blank');
+    
     throw e;
   }
 };

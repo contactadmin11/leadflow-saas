@@ -62,7 +62,7 @@ router.post('/licenses', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.put('/licenses/:id/revoke', async (req, res, next) => {
+router.post('/licenses/:id/revoke', async (req, res, next) => {
   try {
     const license = await License.findByIdAndUpdate(req.params.id, { $set: { status: 'revoked' } }, { new: true });
     if (!license) return res.status(404).json({ error: 'License not found' });
@@ -70,7 +70,7 @@ router.put('/licenses/:id/revoke', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.put('/licenses/:id/extend', async (req, res, next) => {
+router.post('/licenses/:id/extend', async (req, res, next) => {
   try {
     const { days } = req.body;
     const license = await License.findById(req.params.id);
@@ -79,6 +79,43 @@ router.put('/licenses/:id/extend', async (req, res, next) => {
     base.setDate(base.getDate() + (parseInt(days) || 30));
     license.expiresAt = base;
     await license.save();
+    res.json({ license });
+  } catch (err) { next(err); }
+});
+
+router.post('/licenses/:id/reactivate', async (req, res, next) => {
+  try {
+    const license = await License.findByIdAndUpdate(req.params.id, { $set: { status: 'active' } }, { new: true });
+    res.json({ license });
+  } catch (err) { next(err); }
+});
+
+router.post('/licenses/:id/delete', async (req, res, next) => {
+  try {
+    await License.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+router.post('/licenses/:id/reset-devices', async (req, res, next) => {
+  try {
+    const license = await License.findById(req.params.id);
+    if (!license || !license.userId) return res.json({ success: true });
+    // Revoke all sessions for this user
+    const Session = require('../models/Session');
+    await Session.updateMany({ userId: license.userId }, { $set: { revokedAt: new Date() } });
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+router.post('/licenses/:id/max-users', async (req, res, next) => {
+  try {
+    const { maxUsers } = req.body;
+    const license = await License.findByIdAndUpdate(req.params.id, { $set: { maxUsers: parseInt(maxUsers) || 1 } }, { new: true });
+    if (license && license.userId) {
+      const Subscription = require('../models/Subscription');
+      await Subscription.updateOne({ userId: license.userId }, { $set: { maxDevices: license.maxUsers } });
+    }
     res.json({ license });
   } catch (err) { next(err); }
 });
