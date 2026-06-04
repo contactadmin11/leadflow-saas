@@ -545,43 +545,11 @@ function showAuthModal(mode) {
 function closeAuthModal() { document.getElementById('authModalOverlay').classList.remove('show'); }
 document.getElementById('authModalOverlay').onclick = function(e){ if(e.target===this)closeAuthModal(); }
 
-function renderAuthModal(mode) {
-  const isLogin = mode === 'login';
-  const isOtp   = mode === 'otp';
-
-  if (isOtp) {
-    document.getElementById('authModalContent').innerHTML = `
-      <div class="trial-badge"><i class="fas fa-mobile-alt"></i> Fast &amp; Secure Login</div>
-      <h2>Login via OTP</h2>
-      <p class="sub">Enter your registered mobile number</p>
-      <div id="otpStep1">
-        <input class="auth-input" id="authMobile" type="tel" placeholder="Mobile Number (e.g. 9876543210)">
-        <div class="auth-err" id="authErr"></div>
-        <button class="auth-btn" id="sendOtpBtn" onclick="doSendOtp()">
-          <i class="fas fa-paper-plane"></i> Send OTP
-        </button>
-      </div>
-      <div id="otpStep2" style="display:none">
-        <p style="font-size:13px;color:#059669;margin-bottom:10px;font-weight:600"><i class="fas fa-check-circle"></i> OTP Sent successfully!</p>
-        <input class="auth-input" id="authOtpCode" type="text" placeholder="Enter 6-digit OTP" maxlength="6">
-        <div class="auth-err" id="authErr2"></div>
-        <button class="auth-btn" id="verifyOtpBtn" onclick="doVerifyOtp()">
-          <i class="fas fa-sign-in-alt"></i> Verify &amp; Login
-        </button>
-      </div>
-      <div id="recaptcha-container"></div>
-      <div class="auth-switch">
-        <a onclick="renderAuthModal('login')" style="cursor:pointer;color:#3b82f6;text-decoration:underline">&larr; Back to Password Login</a>
-      </div>
-    `;
-    setTimeout(()=>document.getElementById('authMobile')?.focus(),100);
-    return;
-  }
-
+function renderAuthModal() {
   document.getElementById('authModalContent').innerHTML = `
     <div class="trial-badge"><i class="fas fa-gift"></i> 7 Days Free &mdash; No Card Needed</div>
-    <h2>${isLogin ? 'Welcome Back' : 'Create Your Account'}</h2>
-    <p class="sub">${isLogin ? 'Sign in to your LeadFlow dashboard' : 'Start your free 7-day trial instantly'}</p>
+    <h2>Welcome to LeadFlow</h2>
+    <p class="sub">Sign in or create an account to access your dashboard</p>
 
     <!-- Google Sign-In Button -->
     <button class="google-btn" onclick="doGoogleAuth()" id="googleAuthBtn">
@@ -590,22 +558,7 @@ function renderAuthModal(mode) {
     </button>
 
     <div class="auth-err" id="authErr"></div>
-    ${isLogin ? `
-      <div style="margin-top:10px">
-        <button class="auth-btn" style="background:#10b981;box-shadow:0 4px 12px rgba(16,185,129,0.3)" onclick="renderAuthModal('otp')">
-          <i class="fas fa-mobile-alt"></i> Login via Mobile OTP
-        </button>
-      </div>
-    ` : ''}
-    <div class="auth-switch">${isLogin
-      ? 'New here? <a onclick="renderAuthModal(\'register\')">Create free account &rarr;</a>'
-      : 'Already have an account? <a onclick="renderAuthModal(\'login\')">Sign in &rarr;</a>'
-    }</div>
   `;
-  setTimeout(()=>document.getElementById('authEmail')?.focus(),100);
-  document.addEventListener('keydown', function handler(e){
-    if(e.key==='Enter'){ isLogin ? doAuthLogin() : doAuthRegister(); document.removeEventListener('keydown',handler); }
-  });
 }
 
 async function doAuthLogin() {
@@ -623,31 +576,6 @@ async function doAuthLogin() {
     showAuthErr(e.message||'Login failed');
     btn.disabled=false;
     btn.innerHTML='<i class="fas fa-sign-in-alt"></i> Sign In';
-  }
-}
-
-async function doAuthRegister() {
-  const name   = document.getElementById('authName')?.value?.trim();
-  const email  = document.getElementById('authEmail')?.value?.trim();
-  const mobile = document.getElementById('authMobileReg')?.value?.trim();
-  const pass   = document.getElementById('authPass')?.value?.trim();
-  const btn    = document.getElementById('authSubmitBtn');
-
-  if(!name||!email||!mobile||!pass){ showAuthErr('All fields are required including mobile number'); return; }
-
-  // Validate mobile
-  const cleanMobile = mobile.replace(/[\s\-]/g, '');
-  if(cleanMobile.length < 10){ showAuthErr('Enter a valid 10+ digit mobile number'); return; }
-  if(pass.length < 8){ showAuthErr('Password must be at least 8 characters'); return; }
-
-  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creating account...';
-  try {
-    const data = await API.register(email, pass, name, cleanMobile);
-    _postLogin(data);
-  } catch(e) {
-    showAuthErr(e.message||'Registration failed');
-    btn.disabled=false;
-    btn.innerHTML='<i class="fas fa-rocket"></i> Start Free Trial';
   }
 }
 
