@@ -1164,6 +1164,11 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
       <div class="form-group" style="margin-top:10px"><label>Your Name / Admin</label><input type="text" id="setUserName"></div>
       <div class="form-group" style="margin-top:10px"><label>Email</label><input type="email" id="setEmail"></div>
       <div class="form-group" style="margin-top:10px"><label>Phone</label><input type="text" id="setPhone"></div>
+      <div class="form-group" style="margin-top:10px">
+        <label>📱 Your Mobile Number <span style="font-size:11px;color:#10b981;font-weight:600">(Required for OTP Login)</span></label>
+        <input type="tel" id="setMobile" placeholder="10-digit mobile e.g. 9876543210" maxlength="15">
+        <div style="font-size:11px;color:#7a92b0;margin-top:4px">Enter your WhatsApp/mobile number so you can log in via OTP if you forget your password.</div>
+      </div>
       <div class="form-group" style="margin-top:10px"><label>Address</label><textarea id="setAddress" rows="3"></textarea></div>
     </div>
     <div class="card"><div class="card-title"><i class="fas fa-file-invoice"></i> Tax &amp; Billing</div>
@@ -3028,6 +3033,8 @@ function renderReports(){
 function loadSettings(){
   const S=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
   S('setBizName',settings.bizName);S('setUserName',settings.userName);S('setEmail',settings.email);S('setPhone',settings.phone);S('setAddress',settings.address);S('setGSTIN',settings.gstin);S('setPAN',settings.pan);S('setInvPrefix',settings.invPrefix||'INV');S('setPayTerms',settings.payTerms||30);S('setUPI',settings.upi);S('setCurrency',settings.currency||'₹');
+  // Load mobile number from logged-in user profile
+  if(typeof API!=='undefined'&&API.getUser){const u=API.getUser();if(u?.mobile){const mob=document.getElementById('setMobile');if(mob)mob.value=u.mobile;}}
   S('setEjsService',settings.ejsService||'');S('setEjsTemplate',settings.ejsTemplate||'');S('setEjsPublicKey',settings.ejsPublicKey||'');
   S('setResendKey',settings.resendKey||'');S('setResendFrom',settings.resendFrom||'');
   S('setGmailUser',settings.gmailUser||'');S('setGmailPass',settings.gmailPass||'');S('setGmailFromName',settings.gmailFromName||settings.bizName||'');
@@ -3059,7 +3066,13 @@ function saveSettings(){
   settings.openaiApiKey=document.getElementById('setOpenAIKey')?.value.trim()||'';
   settings.geminiApiKey=document.getElementById('setGeminiKey')?.value.trim()||'';
   settings.perplexityApiKey=document.getElementById('setPerplexityKey')?.value.trim()||'';
-  LS.set(KEYS.settings,settings);toast('Settings saved ✅','success');
+  LS.set(KEYS.settings,settings);
+  // Save mobile number to user account (for OTP login)
+  const mobileInput=document.getElementById('setMobile');
+  if(mobileInput&&mobileInput.value.trim()&&typeof API!=='undefined'){
+    API.put('/auth/update-profile',{mobile:mobileInput.value.trim()}).catch(()=>{});
+  }
+  toast('Settings saved ✅','success');
 }
 
 // ===== AI PROVIDER TOGGLE =====

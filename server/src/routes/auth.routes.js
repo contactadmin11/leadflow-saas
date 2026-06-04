@@ -430,4 +430,21 @@ router.put('/password', protect,
   }
 );
 
+// ── Update Profile (name, mobile) ─────────────────────────────────────────────
+router.put('/update-profile', protect, async (req, res, next) => {
+  try {
+    const { name, mobile } = req.body;
+    const updates = {};
+    if (name   && name.trim())   updates.name   = name.trim();
+    if (mobile && mobile.trim()) {
+      // Store mobile normalized — strip everything except digits and leading +
+      updates.mobile = mobile.trim().replace(/[^\d+]/g, '');
+    }
+    if (!Object.keys(updates).length) return res.json({ success: true });
+    const user = await User.findByIdAndUpdate(req.user.id, { $set: updates }, { new: true });
+    await audit({ userId: user._id, action: 'PROFILE_UPDATED', resource: 'User', details: { fields: Object.keys(updates) }, req });
+    res.json({ success: true, user: { id: user._id, email: user.email, name: user.name, role: user.role, mobile: user.mobile } });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

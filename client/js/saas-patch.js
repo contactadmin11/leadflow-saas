@@ -417,8 +417,15 @@ window.doRegister = async function() {
 };
 
 // ── Auto-login if already logged in ─────────────────────────────────────────
+// On page refresh, the access token (memory-only) is gone.
+// We MUST call restoreSession() first to use the httpOnly refresh cookie
+// to silently get a new access token before checking isLoggedIn().
 (async function autoLogin() {
-  if (!API.isLoggedIn()) {
+  // Try to silently restore session from httpOnly cookie
+  const restored = await API.restoreSession().catch(() => false);
+
+  if (!API.isLoggedIn() && !restored) {
+    // No session → show login screen
     document.addEventListener('DOMContentLoaded', () => { showLoginScreen(); });
     return;
   }
