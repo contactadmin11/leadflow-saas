@@ -589,16 +589,7 @@ function renderAuthModal(mode) {
       Continue with Google
     </button>
 
-    <div class="auth-divider">or use email</div>
-
-    ${!isLogin ? '<input class="auth-input" id="authName" placeholder="Your Full Name *" autocomplete="name">' : ''}
-    <input class="auth-input" id="authEmail" type="email" placeholder="Email Address *" autocomplete="email">
-    ${!isLogin ? '<input class="auth-input" id="authMobileReg" type="tel" placeholder="Mobile Number * (for OTP recovery)" autocomplete="tel" maxlength="15">' : ''}
-    <input class="auth-input" id="authPass" type="password" placeholder="Password ${isLogin ? '' : '(min 8 chars) *'}" autocomplete="${isLogin ? 'current-password' : 'new-password'}">
     <div class="auth-err" id="authErr"></div>
-    <button class="auth-btn" id="authSubmitBtn" onclick="${isLogin ? 'doAuthLogin()' : 'doAuthRegister()'}">
-      <i class="fas fa-${isLogin ? 'sign-in-alt' : 'rocket'}"></i> ${isLogin ? 'Sign In' : 'Start Free Trial'}
-    </button>
     ${isLogin ? `
       <div style="margin-top:10px">
         <button class="auth-btn" style="background:#10b981;box-shadow:0 4px 12px rgba(16,185,129,0.3)" onclick="renderAuthModal('otp')">
