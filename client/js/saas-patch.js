@@ -114,7 +114,6 @@ window.checkWANodeServer = async function(silent = false) {
 };
 window.checkWAServer = window.checkWANodeServer;
 
-// ── Override WA reconnect to use new API ────────────────────────────────────
 window.reconnectWANodeServer = async function() {
   if (typeof toast === 'function') toast('🔄 Initializing WhatsApp...', 'info', 3000);
   try {
@@ -125,25 +124,54 @@ window.reconnectWANodeServer = async function() {
         qrEl.innerHTML = `
           <div style="text-align:center;padding:16px">
             <p style="margin-bottom:12px;font-weight:600">Scan this QR code with WhatsApp:</p>
-            <img src="${result.qrBase64}" style="width:220px;height:220px;border-radius:12px;border:3px solid #3b82f6" alt="QR Code">
+            <img id="waQRImg" src="${result.qrBase64}" style="width:220px;height:220px;border-radius:12px;border:3px solid #3b82f6" alt="QR Code">
             <p style="margin-top:10px;font-size:12px;color:#64748b">WhatsApp → Settings → Linked Devices → Link Device</p>
-            <p style="margin-top:8px;font-size:12px;color:#f59e0b" id="waPollingMsg"><i class="fas fa-spinner fa-spin"></i> Waiting for scan...</p>
+            <p style="margin-top:8px;font-size:12px;color:#f59e0b" id="waPollingMsg"><i class="fas fa-spinner fa-spin"></i> Waiting for scan... <span id="waCountdown">3:00</span></p>
+            <button onclick="if(window.waPollInterval)clearInterval(window.waPollInterval);window.reconnectWANodeServer()" style="margin-top:10px;padding:6px 14px;background:#3b82f6;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px">🔄 Refresh QR</button>
           </div>`;
       }
       if (typeof toast === 'function') toast('📱 Scan QR code to connect WhatsApp!', 'info', 8000);
-      
-      // Start polling
+
+      // ── Countdown timer display ─────────────────────────────────────────
+      let secondsLeft = 180; // 3 minutes
+      const countdownEl = () => document.getElementById('waCountdown');
+      const countdownInterval = setInterval(() => {
+        secondsLeft--;
+        const el = countdownEl();
+        if (el) {
+          const m = Math.floor(secondsLeft / 60);
+          const s = String(secondsLeft % 60).padStart(2, '0');
+          el.textContent = `${m}:${s}`;
+        }
+        if (secondsLeft <= 0) clearInterval(countdownInterval);
+      }, 1000);
+
+      // ── Polling — checks status AND refreshes QR if a new one is available ──
       if (window.waPollInterval) clearInterval(window.waPollInterval);
       let attempts = 0;
       window.waPollInterval = setInterval(async () => {
         attempts++;
-        if (attempts > 60) { clearInterval(window.waPollInterval); return; } // Timeout after 3 mins
+        if (attempts > 60) {
+          clearInterval(window.waPollInterval);
+          clearInterval(countdownInterval);
+          const msgEl = document.getElementById('waPollingMsg');
+          if (msgEl) msgEl.innerHTML = '<span style="color:#ef4444">⏰ QR expired. Click Refresh QR to get a new code.</span>';
+          return;
+        }
         try {
           const status = await API.waStatus();
+          // If connected — stop polling and show success
           if (status.ready || status.status === 'connected') {
             clearInterval(window.waPollInterval);
-            if (qrEl) qrEl.innerHTML = '<div style="color:#10b981;font-weight:bold;text-align:center;padding:20px"><i class="fas fa-check-circle" style="font-size:30px"></i><br>WhatsApp Connected!</div>';
+            clearInterval(countdownInterval);
+            if (qrEl) qrEl.innerHTML = '<div style="color:#10b981;font-weight:bold;text-align:center;padding:20px"><i class="fas fa-check-circle" style="font-size:40px"></i><br><br>WhatsApp Connected!<br><span style="font-size:13px;font-weight:400;color:#64748b">PDFs will now auto-attach when you send invoices</span></div>';
             checkWANodeServer(false);
+            if (typeof toast === 'function') toast('✅ WhatsApp connected! PDFs will auto-attach.', 'success', 6000);
+          }
+          // If a new QR is available — update the image (QR rotates every ~20s)
+          if (status.qrBase64) {
+            const imgEl = document.getElementById('waQRImg');
+            if (imgEl && imgEl.src !== status.qrBase64) imgEl.src = status.qrBase64;
           }
         } catch(e){}
       }, 3000);
@@ -151,6 +179,8 @@ window.reconnectWANodeServer = async function() {
     } else if (result.status === 'connected') {
       if (typeof toast === 'function') toast('✅ WhatsApp already connected!', 'success');
       checkWANodeServer(false);
+    } else {
+      if (typeof toast === 'function') toast('⚠️ WA status: ' + (result.status || 'unknown'), 'info', 5000);
     }
   } catch(e) {
     if (typeof toast === 'function') toast('WA init failed: ' + e.message, 'error');
@@ -212,11 +242,15 @@ window._sendViaLocalServer = async function(phone, message, type, id, toEmail = 
   }
 };
 
-// ── Override email send ───────────────────────────────────────────────────────
 window._sendEmailWithPDF = async function(email, name, subject, message, type, id) {
-  if (!email) return;
+  if (!email) {
+    if (typeof toast === 'function') toast('❌ No email address found for this contact.', 'error', 6000);
+    return;
+  }
 
   const docId = await _resolveDocId(type, id);
+  const statusEl = document.getElementById('sdPdfReady');
+  if (statusEl) statusEl.innerHTML = '<span style="color:#f59e0b">⏳ Sending email with PDF attachment…</span>';
 
   try {
     const result = await API.sendEmail({
@@ -230,25 +264,41 @@ window._sendEmailWithPDF = async function(email, name, subject, message, type, i
 
     if (result.success) {
       if (typeof toast === 'function') toast(`✅ Email with PDF sent to ${email}!`, 'success', 5000);
-      const statusEl = document.getElementById('sdPdfReady');
-      if (statusEl) statusEl.innerHTML = '<span style="color:#10b981;font-weight:700">✅ Email sent with PDF!</span>';
+      if (statusEl) statusEl.innerHTML = '<span style="color:#10b981;font-weight:700">✅ Email sent with PDF attached!</span>';
     } else {
       throw new Error(result.error || 'Email send failed');
     }
   } catch(e) {
-    const isConfigError = e.message.toLowerCase().includes('gmail not configured') || e.message.toLowerCase().includes('settings not found');
-    if (isConfigError) {
-      if (typeof toast === 'function') toast('❌ Gmail not configured. Go to Settings -> Email Integration -> Enter Gmail & App Password.', 'error', 8000);
-      const statusEl = document.getElementById('sdPdfReady');
-      if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;font-weight:700">❌ Setup Gmail App Password in Settings first!</span>';
+    const errMsg = e.message || '';
+    const isGmailMissing = errMsg.toLowerCase().includes('gmail not configured')
+      || errMsg.toLowerCase().includes('settings not found')
+      || errMsg.toLowerCase().includes('no gmail')
+      || errMsg.toLowerCase().includes('smtp')
+      || errMsg.toLowerCase().includes('credentials');
+
+    if (isGmailMissing) {
+      // Clear, actionable error with steps
+      const setupMsg = '❌ Gmail not configured. To fix:<br>' +
+        '1. Go to <b>Settings → Email Integration</b><br>' +
+        '2. Enter your Gmail address<br>' +
+        '3. Enter your 16-character Gmail App Password<br>' +
+        '(<a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:#3b82f6">Get App Password here</a>)';
+      if (statusEl) statusEl.innerHTML = `<span style="color:#ef4444;font-weight:700">${setupMsg}</span>`;
+      if (typeof toast === 'function') toast(
+        '❌ Gmail not set up. Go to Settings → Email Integration to configure it.',
+        'error', 10000
+      );
     } else {
-      if (typeof toast === 'function') toast('Email failed: ' + e.message, 'error', 5000);
+      if (statusEl) statusEl.innerHTML = `<span style="color:#ef4444">❌ Email failed: ${errMsg}</span>`;
+      if (typeof toast === 'function') toast('Email failed: ' + errMsg, 'error', 5000);
     }
-    
-    // Fallback to local mailto
+
+    // Fallback — open mailto so the user can still send manually
     if (typeof _autoDownloadPDF === 'function') _autoDownloadPDF();
-    window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`, '_blank');
-    
+    setTimeout(() => {
+      window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`, '_blank');
+    }, 500);
+
     throw e;
   }
 };

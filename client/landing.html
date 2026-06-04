@@ -834,16 +834,23 @@ async function doVerifyOtp() {
     // 2. Get ID Token
     const idToken = await result.user.getIdToken();
     
-    // 3. Send to our backend to create session
-    const res = await fetch(`${API.baseUrl}/auth/otp/login`, {
+    // 3. Send to our backend to create session (with device binding + credentials for cookie)
+    const fp   = (window.LeadFlowDevice) ? await window.LeadFlowDevice.getFingerprint().catch(()=>null) : null;
+    const dn   = (window.LeadFlowDevice) ? window.LeadFlowDevice.getDeviceName() : 'Browser';
+    const apiBase = window.LEADFLOW_API_URL || (window.location.origin + '/api');
+    const res = await fetch(`${apiBase}/auth/otp/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken, deviceInfo: {} })
+      headers: {
+        'Content-Type': 'application/json',
+        ...(fp ? { 'X-Device-ID': fp, 'X-Device-Name': dn } : {})
+      },
+      credentials: 'include',  // ensures httpOnly refresh cookie is set
+      body: JSON.stringify({ idToken, deviceInfo: { name: dn } })
     });
     const data = await res.json();
     if (!data.accessToken) throw new Error(data.error || 'Login failed');
 
-    // 4. Finalize login
+    // 4. Finalize login — set access token + user in memory (secure)
     API.setAccessToken(data.accessToken);
     API.setUser(data.user);
     _postLogin(data);

@@ -43,6 +43,9 @@ let _deviceName        = null;
 
 const API = {
 
+  // ── Base URL (read-only) ───────────────────────────────────────────────────
+  get baseUrl() { return API_BASE; },
+
   // ── Token management (memory only) ────────────────────────────────────────
   setAccessToken(token) {
     _accessToken = token;
