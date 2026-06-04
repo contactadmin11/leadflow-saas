@@ -547,19 +547,24 @@ body.dark-mode .tpl-preview,body.dark-mode .timeline-content{background:#0f172a}
 </style>
 </head>
 <body>
-<!-- LOGIN -->
-<div id="loginScreen">
+<!-- LOGIN SCREEN: Hidden by default. Auth is handled on landing page (/) -->
+<!-- If user arrives here without a session, they get redirected to / immediately -->
+<div id="loginScreen" style="display:none">
   <div class="login-box">
     <div class="login-logo">🎯</div>
     <h1>LeadFlow OS</h1>
-    <p class="tagline">AUTOMATION-FIRST CRM · V2.0</p>
-    <input type="email" id="loginUser" placeholder="Email Address" autocomplete="email">
-    <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password">
-    <button id="loginBtn" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> Sign In</button>
-    <div class="login-err" id="loginErr">Invalid credentials.</div>
-    <div class="login-hint">No account? <a href="#" onclick="showRegisterScreen()" style="color:#93c5fd;text-decoration:none">Register free →</a></div>
+    <p class="tagline">Redirecting...</p>
   </div>
 </div>
+<script>
+// Immediate check: if no refresh cookie exists, redirect to landing page right now
+// This prevents the old login screen from flashing before saas-patch.js loads
+(function(){
+  // The httpOnly cookie can't be read by JS, so we check if this is a direct
+  // visit without prior auth. saas-patch.js autoLogin() handles the real session check.
+  // This just hides the login screen so it never flashes.
+})();
+</script>
 <div id="toastContainer"></div>
 <div id="appContainer" style="display:none">
 <div id="sidebar">

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -784,16 +784,24 @@ window.confirmationResult = null;
 function initFirebaseOTP() {
   if (window.recaptchaVerifier) return;
   try {
-    firebase.initializeApp({
-      apiKey: "AIzaSyAYxOwLQ444H_EnVlD_8dcDYcP6lSs3iPU",
-      authDomain: "lead-flow-74e12.firebaseapp.com",
-      projectId: "lead-flow-74e12",
-      storageBucket: "lead-flow-74e12.firebasestorage.app",
-      messagingSenderId: "987825746804",
-      appId: "1:987825746804:web:cba457f3ba0ded4676f221",
-    });
+    // Only initialize if not already initialized
+    if (!firebase.apps.length) {
+      firebase.initializeApp({
+        apiKey: "AIzaSyAYxOwLQ444H_EnVlD_8dcDYcP6lSs3iPU",
+        authDomain: "lead-flow-74e12.firebaseapp.com",
+        projectId: "lead-flow-74e12",
+        storageBucket: "lead-flow-74e12.firebasestorage.app",
+        messagingSenderId: "987825746804",
+        appId: "1:987825746804:web:cba457f3ba0ded4676f221",
+      });
+    }
+    // Use device language for SMS
+    firebase.auth().useDeviceLanguage();
+    // Set up invisible reCAPTCHA
     window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-      'size': 'invisible'
+      'size': 'invisible',
+      'callback': function(response) { /* reCAPTCHA solved */ },
+      'expired-callback': function() { window.recaptchaVerifier = null; }
     });
   } catch(e) { console.error('Firebase init error', e); }
 }
