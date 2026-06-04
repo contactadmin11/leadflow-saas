@@ -844,11 +844,8 @@ async function doVerifyOtp() {
     if (!data.accessToken) throw new Error(data.error || 'Login failed');
 
     // 4. Finalize login
-    API.token = data.accessToken;
-    LS.set(KEYS.token, data.accessToken);
-    LS.set(KEYS.user, data.user);
-    if (data.subscription) LS.set(KEYS.sub, data.subscription);
-    
+    API.setAccessToken(data.accessToken);
+    API.setUser(data.user);
     _postLogin(data);
   } catch (error) {
     if (errEl) { errEl.textContent = error.message || 'Invalid OTP'; errEl.style.display = 'block'; }
