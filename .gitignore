@@ -3,6 +3,14 @@ server/.env
 .env
 .env.local
 .env.production
+secrets.ps1
+
+# PowerShell scripts with hardcoded keys (local only)
+*-render.ps1
+audit-render.ps1
+check-*.ps1
+redeploy.ps1
+verify-all.ps1
 
 # Node modules
 node_modules/

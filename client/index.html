@@ -3062,11 +3062,25 @@ function saveSettings(){
   settings.gmailPass=document.getElementById('setGmailPass')?.value.trim()||'';
   settings.gmailFromName=document.getElementById('setGmailFromName')?.value.trim()||'';
   settings.gstEnabled=settings.gstEnabled!==false;settings.aiProvider=document.getElementById('setAIProvider')?.value||'local';
-  settings.claudeApiKey=document.getElementById('setClaudeKey')?.value.trim()||'';
-  settings.openaiApiKey=document.getElementById('setOpenAIKey')?.value.trim()||'';
-  settings.geminiApiKey=document.getElementById('setGeminiKey')?.value.trim()||'';
-  settings.perplexityApiKey=document.getElementById('setPerplexityKey')?.value.trim()||'';
+  // ── SECURITY: AI keys are sent to backend (AES-encrypted in DB), NOT stored in localStorage ──
+  const _claudeKey   = document.getElementById('setClaudeKey')?.value.trim()||'';
+  const _openaiKey   = document.getElementById('setOpenAIKey')?.value.trim()||'';
+  const _geminiKey   = document.getElementById('setGeminiKey')?.value.trim()||'';
+  const _perplexKey  = document.getElementById('setPerplexityKey')?.value.trim()||'';
+  // Remove from local settings object so they don't go into localStorage
+  delete settings.claudeApiKey; delete settings.openaiApiKey;
+  delete settings.geminiApiKey; delete settings.perplexityApiKey;
   LS.set(KEYS.settings,settings);
+  // Send everything (including API keys) to the backend which encrypts and stores in DB
+  if(typeof API !== 'undefined') {
+    API.put('/settings', {
+      ...settings,
+      claudeKey: _claudeKey, openaiKey: _openaiKey,
+      geminiKey: _geminiKey, perplexKey: _perplexKey,
+      aiProvider: settings.aiProvider,
+      gmailUser: settings.gmailUser, gmailPass: settings.gmailPass, gmailFromName: settings.gmailFromName
+    }).catch(e => console.warn('[Settings] Backend save failed:', e.message));
+  }
   // Save mobile number to user account (for OTP login)
   const mobileInput=document.getElementById('setMobile');
   if(mobileInput&&mobileInput.value.trim()&&typeof API!=='undefined'){
@@ -3084,25 +3098,20 @@ function onAIProviderChange(){
 
 // ===== MULTI-PROVIDER AI CALL =====
 async function callLiveAI(messages,systemPrompt){
-  const prov=settings.aiProvider||'local';
-  if(prov==='claude'&&settings.claudeApiKey?.startsWith('sk-ant-')){
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':settings.claudeApiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,system:systemPrompt,messages})});
-    const d=await res.json();if(d.error)throw new Error(d.error.message);return d.content?.[0]?.text||'';
+  // ── SECURITY: All AI calls go through backend. Keys never exposed in browser ──
+  // The backend reads encrypted API keys from MongoDB and calls AI providers server-side.
+  try {
+    if(typeof API !== 'undefined') {
+      // Convert messages array to last user message for backend
+      const lastMsg = messages[messages.length-1]?.content || '';
+      const contextMsg = systemPrompt ? systemPrompt + '\n\nUser: ' + lastMsg : lastMsg;
+      const result = await API.aiChat(contextMsg, null);
+      return result?.reply || null;
+    }
+  } catch(e) {
+    console.warn('[AI] Backend call failed:', e.message);
   }
-  if(prov==='openai'&&settings.openaiApiKey?.startsWith('sk-')){
-    const res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+settings.openaiApiKey},body:JSON.stringify({model:'gpt-4o',max_tokens:1200,messages:[{role:'system',content:systemPrompt},...messages]})});
-    const d=await res.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||'';
-  }
-  if(prov==='gemini'&&settings.geminiApiKey){
-    const contents=messages.map(m=>({role:m.role==='assistant'?'model':'user',parts:[{text:m.content}]}));
-    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${settings.geminiApiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:systemPrompt}]},contents,generationConfig:{maxOutputTokens:1200}})});
-    const d=await res.json();if(d.error)throw new Error(d.error.message);return d.candidates?.[0]?.content?.parts?.[0]?.text||'';
-  }
-  if(prov==='perplexity'&&settings.perplexityApiKey){
-    const res=await fetch('https://api.perplexity.ai/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+settings.perplexityApiKey},body:JSON.stringify({model:'llama-3.1-sonar-large-128k-online',max_tokens:1200,messages:[{role:'system',content:systemPrompt},...messages]})});
-    const d=await res.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||'';
-  }
-  return null; // no provider configured — use local
+  return null; // fallback to local built-in AI in saas-patch
 }
 
 // ===== LEAD CAPTURE ENGINE =====
