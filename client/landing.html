@@ -525,6 +525,12 @@ footer{padding:48px 40px;border-top:1px solid var(--border);display:flex;justify
   </div>
 </div>
 
+<!-- Firebase SDK (loaded before main script so firebase object is available) -->
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+<!-- Razorpay SDK -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
 <script>
 // ── Auth Modal ──────────────────────────────────────────────────────────────
 function showAuthModal(mode) {
@@ -764,7 +770,7 @@ if (API.isLoggedIn()) {
       <i class="fas fa-tachometer-alt"></i> Go to Dashboard
     </button>`;
 }
-}
+
 
 // ── FIREBASE OTP LOGIC ────────────────────────────────────────────────────────
 window.confirmationResult = null;
@@ -861,10 +867,7 @@ async function doVerifyOtp() {
   }
 }
 </script>
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
-<!-- Razorpay SDK -->
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </body>
 </html>
+
+
