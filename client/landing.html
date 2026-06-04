@@ -800,10 +800,11 @@ async function doSendOtp() {
   const btn = document.getElementById('sendOtpBtn');
 
   if (!phone) { if(errEl){errEl.textContent='Enter your mobile number'; errEl.style.display='block';} return; }
-  
+
   // Format phone number to E.164
   if (!phone.startsWith('+')) {
     if (phone.length === 10) phone = '+91' + phone;
+    else if (phone.length === 11 && phone.startsWith('0')) phone = '+91' + phone.slice(1);
     else phone = '+' + phone;
   }
 
@@ -817,18 +818,35 @@ async function doSendOtp() {
     document.getElementById('otpStep2').style.display = 'block';
     setTimeout(() => document.getElementById('authOtpCode')?.focus(), 100);
   } catch (error) {
-    if (errEl) { errEl.textContent = error.message; errEl.style.display = 'block'; }
+    let msg = error.message || 'Failed to send OTP';
+    // Translate Firebase error codes into human-readable messages
+    if (error.code === 'auth/operation-not-allowed') {
+      msg = '⚙️ Phone Auth not enabled. Go to Firebase Console → Authentication → Sign-in method → Phone → Enable it.';
+    } else if (error.code === 'auth/invalid-phone-number') {
+      msg = 'Invalid phone number. Use format: 9876543210 or +919876543210';
+    } else if (error.code === 'auth/too-many-requests') {
+      msg = 'Too many attempts. Please wait a few minutes and try again.';
+    } else if (error.code === 'auth/captcha-check-failed') {
+      // Reset recaptcha and retry
+      window.recaptchaVerifier = null;
+      initFirebaseOTP();
+      msg = 'Verification failed. Please try again.';
+    }
+    if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send OTP';
   }
 }
 
 async function doVerifyOtp() {
-  const code = document.getElementById('authOtpCode')?.value?.trim();
+  const code  = document.getElementById('authOtpCode')?.value?.trim();
   const errEl = document.getElementById('authErr2');
-  const btn = document.getElementById('verifyOtpBtn');
+  const btn   = document.getElementById('verifyOtpBtn');
 
-  if (!code || code.length < 6) { if(errEl){errEl.textContent='Enter valid 6-digit OTP'; errEl.style.display='block';} return; }
+  if (!code || code.length < 6) {
+    if (errEl) { errEl.textContent = 'Enter a valid 6-digit OTP'; errEl.style.display = 'block'; }
+    return;
+  }
 
   if (errEl) errEl.style.display = 'none';
   btn.disabled = true;
@@ -836,32 +854,54 @@ async function doVerifyOtp() {
 
   try {
     // 1. Verify OTP with Firebase
-    const result = await window.confirmationResult.confirm(code);
-    // 2. Get ID Token
+    const result  = await window.confirmationResult.confirm(code);
     const idToken = await result.user.getIdToken();
-    
-    // 3. Send to our backend to create session (with device binding + credentials for cookie)
-    const fp   = (window.LeadFlowDevice) ? await window.LeadFlowDevice.getFingerprint().catch(()=>null) : null;
-    const dn   = (window.LeadFlowDevice) ? window.LeadFlowDevice.getDeviceName() : 'Browser';
+
+    // 2. Send to backend — creates session + httpOnly cookie
+    const fp  = window.LeadFlowDevice ? await window.LeadFlowDevice.getFingerprint().catch(() => null) : null;
+    const dn  = window.LeadFlowDevice ? window.LeadFlowDevice.getDeviceName() : 'Browser';
     const apiBase = window.LEADFLOW_API_URL || (window.location.origin + '/api');
+
     const res = await fetch(`${apiBase}/auth/otp/login`, {
-      method: 'POST',
-      headers: {
+      method:      'POST',
+      headers:     {
         'Content-Type': 'application/json',
         ...(fp ? { 'X-Device-ID': fp, 'X-Device-Name': dn } : {})
       },
-      credentials: 'include',  // ensures httpOnly refresh cookie is set
+      credentials: 'include',   // sets httpOnly refresh cookie
       body: JSON.stringify({ idToken, deviceInfo: { name: dn } })
     });
     const data = await res.json();
     if (!data.accessToken) throw new Error(data.error || 'Login failed');
 
-    // 4. Finalize login — set access token + user in memory (secure)
+    // 3. Store tokens securely in memory
     API.setAccessToken(data.accessToken);
     API.setUser(data.user);
+
+    // 4. New OTP user — ask for their name before entering the app
+    if (data.isNewUser) {
+      const name = prompt(`Welcome! You've been registered via OTP.\nEnter your name to personalize your account:`, `User ${(data.user.mobile || '').slice(-4)}`);
+      if (name && name.trim()) {
+        // Update name in backend
+        try {
+          await fetch(`${apiBase}/auth/update-profile`, {
+            method:  'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${data.accessToken}` },
+            body:    JSON.stringify({ name: name.trim() })
+          });
+          data.user.name = name.trim();
+          API.setUser(data.user);
+        } catch(e) { /* non-critical */ }
+      }
+    }
+
+    // 5. Go to the CRM app directly — no intermediate page
     _postLogin(data);
   } catch (error) {
-    if (errEl) { errEl.textContent = error.message || 'Invalid OTP'; errEl.style.display = 'block'; }
+    let msg = error.message || 'Invalid OTP';
+    if (error.code === 'auth/invalid-verification-code') msg = 'Wrong OTP. Please check and try again.';
+    if (error.code === 'auth/code-expired')             msg = 'OTP expired. Please go back and request a new one.';
+    if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Verify & Login';
   }

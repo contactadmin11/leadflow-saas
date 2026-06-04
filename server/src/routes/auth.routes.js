@@ -245,17 +245,13 @@ router.post('/refresh', async (req, res, next) => {
     }
 
     // ── Device fingerprint validation ─────────────────────────────────────
+    // NOTE: We do NOT revoke sessions on fingerprint mismatch — browser
+    // fingerprints can change slightly between page loads (OS updates,
+    // browser updates, etc). Revoking here was causing users to be
+    // repeatedly logged out. Instead we just update the stored fingerprint.
     const incomingFp = req.headers['x-device-id'];
-    if (session.deviceFingerprint && incomingFp &&
-        session.deviceFingerprint !== incomingFp) {
-      // Fingerprint changed — device is different, revoke session
-      session.revokedAt = new Date();
-      await session.save();
-      res.clearCookie(REFRESH_COOKIE, COOKIE_OPTS);
-      return res.status(403).json({
-        error: 'Device fingerprint mismatch. Please login again.',
-        code:  'DEVICE_NOT_AUTHORIZED'
-      });
+    if (incomingFp && session.deviceFingerprint !== incomingFp) {
+      session.deviceFingerprint = incomingFp; // update silently
     }
 
     const user = await User.findOne({ _id: decoded.id, deletedAt: null, isActive: true });
@@ -295,7 +291,7 @@ router.post('/refresh', async (req, res, next) => {
 
 // ── OTP Login (Firebase Phone Auth) ──────────────────────────────────────────
 const axios = require('axios');
-const FIREBASE_KEYS_URL = 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
+const crypto = require('crypto');
 
 router.post('/otp/login',
   authLimiter,
@@ -303,35 +299,79 @@ router.post('/otp/login',
   validate,
   async (req, res, next) => {
     try {
-      const { idToken, deviceInfo: bodyDeviceInfo } = req.body;
-      
+      const { idToken, deviceInfo: bodyDeviceInfo, name: bodyName } = req.body;
+
+      // ── 1. Verify Firebase ID Token ──────────────────────────────────────
       const decodedHeader = jwt.decode(idToken, { complete: true });
-      if (!decodedHeader || !decodedHeader.header || !decodedHeader.header.kid) {
+      if (!decodedHeader?.header?.kid) {
         return res.status(401).json({ error: 'Invalid token format' });
       }
 
-      const keysRes = await axios.get(FIREBASE_KEYS_URL);
+      const keysRes = await axios.get('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
       const publicKey = keysRes.data[decodedHeader.header.kid];
       if (!publicKey) return res.status(401).json({ error: 'Invalid token signature' });
 
       const decodedToken = jwt.verify(idToken, publicKey, { algorithms: ['RS256'] });
-      
-      let phone = decodedToken.phone_number;
-      if (!phone) return res.status(400).json({ error: 'No phone number found in authentication token' });
 
-      const phoneRegex = new RegExp(phone.replace('+', '\\+?'), 'i');
+      const phone      = decodedToken.phone_number;
+      const firebaseUid= decodedToken.uid;
+      if (!phone) return res.status(400).json({ error: 'No phone number in token' });
 
-      const user = await User.findOne({ mobile: phoneRegex, deletedAt: null });
+      // ── 2. Find or auto-create user ───────────────────────────────────────
+      let user = null;
+      let isNewUser = false;
+
+      // Priority 1: Find by firebaseUid (most reliable — survives number changes)
+      if (firebaseUid) {
+        user = await User.findOne({ firebaseUid, deletedAt: null });
+      }
+
+      // Priority 2: Find by exact mobile number
       if (!user) {
-        return res.status(404).json({ error: `User with mobile ${phone} not found. Please register first or add this mobile number to your profile.` });
+        // Normalise: strip spaces, ensure +91 prefix for Indian numbers
+        const normPhone = phone.replace(/\s/g, '');
+        user = await User.findOne({ mobile: normPhone, deletedAt: null });
+      }
+
+      // Priority 3: Auto-create a new account for first-time OTP users
+      if (!user) {
+        isNewUser = true;
+        const autoEmail = User.mobileEmail(phone);
+        const autoName  = bodyName || `User ${phone.slice(-4)}`; // e.g. "User 4321"
+        // Generate a random secure password (OTP user doesn't know it — they login via OTP)
+        const randomPass = await User.hashPassword(crypto.randomBytes(32).toString('hex'));
+
+        user = await User.create({
+          email:       autoEmail,
+          passwordHash:randomPass,
+          name:        autoName,
+          mobile:      phone,
+          firebaseUid: firebaseUid,
+          authMethods: ['otp'],
+          isActive:    true
+        });
+        // Create default settings + trial
+        await Settings.create({ userId: user._id, phone, bizName: autoName, userName: autoName });
+        await _createTrial(user._id);
+        await audit({ userId: user._id, action: 'REGISTER_OTP', resource: 'User', details: { mobile: phone }, req });
+      } else {
+        // Link firebaseUid if not yet linked
+        const updates = {};
+        if (!user.firebaseUid && firebaseUid) updates.firebaseUid = firebaseUid;
+        if (!user.mobile)                    updates.mobile = phone;
+        if (!user.authMethods?.includes('otp')) {
+          updates.$addToSet = { authMethods: 'otp' };
+        }
+        if (Object.keys(updates).length) await User.findByIdAndUpdate(user._id, updates);
       }
 
       if (!user.isActive) return res.status(403).json({ error: 'Account deactivated. Contact support.' });
 
+      // ── 3. OTP rate-limit (3 per day) ────────────────────────────────────
       const today = new Date().toISOString().split('T')[0];
       if (user.lastOtpLoginDate === today) {
         if (user.otpLoginsToday >= 3) {
-          return res.status(429).json({ error: 'You have reached the maximum of 3 OTP logins for today. Please login with your password.' });
+          return res.status(429).json({ error: 'Maximum 3 OTP logins per day reached. Login with password instead.' });
         }
         user.otpLoginsToday += 1;
       } else {
@@ -341,30 +381,32 @@ router.post('/otp/login',
       user.lastLoginAt = new Date();
       await user.save();
 
-      const deviceInfo = getDeviceInfo(req, bodyDeviceInfo);
-      const fingerprint = deviceInfo.fingerprint;
+      // ── 4. Device / session management ──────────────────────────────────
+      const deviceInfo   = getDeviceInfo(req, bodyDeviceInfo);
+      const fingerprint  = deviceInfo.fingerprint;
 
       const sub = await Subscription.findOne({ userId: user._id });
       const maxDevices = sub?.maxDevices ?? 1;
 
-      if (maxDevices !== 0 && fingerprint) {
+      if (!isNewUser && maxDevices !== 0 && fingerprint) {
         const activeSessions = await Session.find({ userId: user._id, revokedAt: null, expiresAt: { $gt: new Date() } });
-        const isKnownDevice = activeSessions.some(s => s.deviceFingerprint === fingerprint);
+        const isKnownDevice  = activeSessions.some(s => s.deviceFingerprint === fingerprint);
         if (!isKnownDevice && activeSessions.length >= maxDevices) {
           return res.status(403).json({
-            error: `Device limit reached (${maxDevices}/${maxDevices}). Please log out from another device first.`
+            error: `Device limit reached (${activeSessions.length}/${maxDevices}). Log out from another device first.`
           });
         }
       }
 
+      // ── 5. Issue tokens + set cookie ─────────────────────────────────────
       const accessToken  = signAccess(user);
       const refreshToken = signRefresh(user);
-      const exp = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+      const exp = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000); // 5 days
 
       await Session.create({
         userId:            user._id,
         refreshToken,
-        deviceFingerprint: deviceInfo.fingerprint,
+        deviceFingerprint: fingerprint,
         deviceName:        deviceInfo.name,
         deviceInfo,
         ip:                req.ip,
@@ -372,16 +414,17 @@ router.post('/otp/login',
       });
 
       res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTS);
-      await audit({ userId: user._id, action: 'LOGIN_OTP', resource: 'User', details: { mobile: phone }, req });
+      await audit({ userId: user._id, action: 'LOGIN_OTP', resource: 'User', details: { mobile: phone, isNewUser }, req });
 
       res.json({
         accessToken,
+        isNewUser,
         user: { id: user._id, email: user.email, name: user.name, role: user.role, mobile: user.mobile },
-        subscription: { plan: sub?.plan || 'none', daysRemaining: 0 }
+        subscription: sub ? { plan: sub.plan, daysRemaining: sub.daysRemaining } : null
       });
-    } catch (err) { 
-      if (err.name === 'TokenExpiredError') return res.status(401).json({ error: 'OTP Token has expired' });
-      next(err); 
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') return res.status(401).json({ error: 'OTP session expired. Please try again.' });
+      next(err);
     }
   }
 );
