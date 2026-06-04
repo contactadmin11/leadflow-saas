@@ -179,6 +179,11 @@ footer{padding:48px 40px;border-top:1px solid var(--border);display:flex;justify
 .modal-close-btn{position:absolute;top:16px;right:20px;background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer}
 .auth-modal{position:relative}
 .trial-badge{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#34d399;font-size:12px;font-weight:600;padding:6px 16px;border-radius:20px;display:inline-block;margin-bottom:20px}
+.google-btn{width:100%;padding:13px;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;color:#1f2937;font-size:14px;font-weight:600;cursor:pointer;transition:.2s;font-family:'Inter',sans-serif;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:10px}
+.google-btn:hover{background:#f8fafc;box-shadow:0 4px 16px rgba(0,0,0,.15);transform:translateY(-1px)}
+.google-btn svg{width:20px;height:20px;flex-shrink:0}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--text2);font-size:12px}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 
 @media(max-width:768px){
   nav{padding:14px 20px}
@@ -577,6 +582,15 @@ function renderAuthModal(mode) {
     <div class="trial-badge"><i class="fas fa-gift"></i> 7 Days Free &mdash; No Card Needed</div>
     <h2>${isLogin ? 'Welcome Back' : 'Create Your Account'}</h2>
     <p class="sub">${isLogin ? 'Sign in to your LeadFlow dashboard' : 'Start your free 7-day trial instantly'}</p>
+
+    <!-- Google Sign-In Button -->
+    <button class="google-btn" onclick="doGoogleAuth()" id="googleAuthBtn">
+      <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+      Continue with Google
+    </button>
+
+    <div class="auth-divider">or use email</div>
+
     ${!isLogin ? '<input class="auth-input" id="authName" placeholder="Your Full Name *" autocomplete="name">' : ''}
     <input class="auth-input" id="authEmail" type="email" placeholder="Email Address *" autocomplete="email">
     ${!isLogin ? '<input class="auth-input" id="authMobileReg" type="tel" placeholder="Mobile Number * (for OTP recovery)" autocomplete="tel" maxlength="15">' : ''}
@@ -586,9 +600,9 @@ function renderAuthModal(mode) {
       <i class="fas fa-${isLogin ? 'sign-in-alt' : 'rocket'}"></i> ${isLogin ? 'Sign In' : 'Start Free Trial'}
     </button>
     ${isLogin ? `
-      <div style="margin-top:12px">
+      <div style="margin-top:10px">
         <button class="auth-btn" style="background:#10b981;box-shadow:0 4px 12px rgba(16,185,129,0.3)" onclick="renderAuthModal('otp')">
-          <i class="fas fa-mobile-alt"></i> Login via OTP (Mobile)
+          <i class="fas fa-mobile-alt"></i> Login via Mobile OTP
         </button>
       </div>
     ` : ''}
@@ -655,6 +669,117 @@ function _postLogin(data) {
   closeAuthModal();
   window.location.href = '/index.html';
 }
+
+// == Google Sign-In ==
+async function doGoogleAuth() {
+  const btn = document.getElementById('googleAuthBtn');
+  const errEl = document.getElementById('authErr');
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin" style="color:#4285F4"></i> Connecting to Google...'; }
+  if(errEl) errEl.style.display='none';
+
+  try {
+    // 1. Firebase Google popup
+    if(!firebase.apps.length){
+      firebase.initializeApp({
+        apiKey:"AIzaSyAYxOwLQ444H_EnVlD_8dcDYcP6lSs3iPU",
+        authDomain:"lead-flow-74e12.firebaseapp.com",
+        projectId:"lead-flow-74e12",
+        storageBucket:"lead-flow-74e12.firebasestorage.app",
+        messagingSenderId:"987825746804",
+        appId:"1:987825746804:web:cba457f3ba0ded4676f221"
+      });
+    }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.addScope('email');
+    provider.addScope('profile');
+    const result  = await firebase.auth().signInWithPopup(provider);
+    const idToken = await result.user.getIdToken();
+
+    // 2. Send to backend — check if user exists
+    const apiBase = window.LEADFLOW_API_URL || (window.location.origin + '/api');
+    const fp = window.LeadFlowDevice ? await window.LeadFlowDevice.getFingerprint().catch(()=>null) : null;
+    const dn = window.LeadFlowDevice ? window.LeadFlowDevice.getDeviceName() : 'Browser';
+
+    const res1 = await fetch(apiBase + '/auth/google/login', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', ...(fp?{'X-Device-ID':fp,'X-Device-Name':dn}:{}) },
+      credentials: 'include',
+      body: JSON.stringify({ idToken, deviceInfo:{ name:dn } })
+    });
+    const data1 = await res1.json();
+
+    // 3. New user — mobile required to prevent multi-account abuse
+    if(data1.needsMobile){
+      if(btn){ btn.disabled=false; btn.innerHTML='<svg viewBox="0 0 48 48" style="width:20px;height:20px"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Continue with Google'; }
+      // Show mobile prompt inside modal
+      _showGoogleMobilePrompt(idToken, data1.email, data1.name, apiBase, fp, dn);
+      return;
+    }
+
+    if(!data1.accessToken) throw new Error(data1.error || 'Google login failed');
+
+    // 4. Existing user — login directly
+    API.setAccessToken(data1.accessToken);
+    API.setUser(data1.user);
+    _postLogin(data1);
+
+  } catch(e) {
+    let msg = e.message || 'Google sign-in failed';
+    if(e.code === 'auth/popup-closed-by-user') msg = 'Sign-in cancelled. Please try again.';
+    if(e.code === 'auth/popup-blocked')        msg = 'Popup blocked. Please allow popups for this site.';
+    if(errEl){ errEl.textContent=msg; errEl.style.display='block'; }
+    if(btn){ btn.disabled=false; btn.innerHTML='<svg viewBox="0 0 48 48" style="width:20px;height:20px"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Continue with Google'; }
+  }
+}
+
+function _showGoogleMobilePrompt(idToken, email, name, apiBase, fp, dn) {
+  document.getElementById('authModalContent').innerHTML = `
+    <div class="trial-badge" style="background:rgba(66,133,244,.1);border-color:rgba(66,133,244,.3);color:#4285F4">
+      <svg viewBox="0 0 48 48" style="width:14px;height:14px;display:inline;margin-right:6px"><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/></svg>
+      Google Account Connected
+    </div>
+    <h2>One Last Step</h2>
+    <p class="sub">Hi <strong>${name||email}</strong>! Enter your mobile number to secure your account and enable OTP recovery.</p>
+    <input class="auth-input" id="googleMobileInput" type="tel" placeholder="Mobile Number * (e.g. 9876543210)" autocomplete="tel" maxlength="15">
+    <div class="auth-err" id="googleMobileErr"></div>
+    <button class="auth-btn" id="googleMobileSubmitBtn" onclick="_submitGoogleWithMobile('${idToken.replace(/'/g,"\\'")}','${apiBase}','${fp||''}','${dn}')">
+      <i class="fas fa-check-circle"></i> Complete Registration
+    </button>
+  `;
+  setTimeout(()=>document.getElementById('googleMobileInput')?.focus(),100);
+}
+
+async function _submitGoogleWithMobile(idToken, apiBase, fp, dn) {
+  const mobileRaw = document.getElementById('googleMobileInput')?.value?.trim();
+  const errEl = document.getElementById('googleMobileErr');
+  const btn   = document.getElementById('googleMobileSubmitBtn');
+
+  let mobile = (mobileRaw||'').replace(/[\s\-]/g,'');
+  if(mobile.length < 10){ if(errEl){errEl.textContent='Enter a valid 10+ digit mobile number';errEl.style.display='block';} return; }
+  if(!mobile.startsWith('+')){ mobile = mobile.length===10 ? '+91'+mobile : '+'+mobile; }
+
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creating account...';
+  if(errEl) errEl.style.display='none';
+
+  try {
+    const res = await fetch(apiBase + '/auth/google/login', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', ...(fp?{'X-Device-ID':fp,'X-Device-Name':dn}:{}) },
+      credentials:'include',
+      body: JSON.stringify({ idToken, mobile, deviceInfo:{ name:dn } })
+    });
+    const data = await res.json();
+    if(!data.accessToken) throw new Error(data.error || 'Registration failed');
+    API.setAccessToken(data.accessToken);
+    API.setUser(data.user);
+    _postLogin(data);
+  } catch(e) {
+    if(errEl){ errEl.textContent=e.message||'Failed'; errEl.style.display='block'; }
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-check-circle"></i> Complete Registration';
+  }
+}
+
+
 
 // == Buy Inquiry Modal ==
 function openBuyModal(plan, price) {

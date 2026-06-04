@@ -8,8 +8,9 @@ const userSchema = new mongoose.Schema({
   name:             { type: String, required: true, trim: true },
   role:             { type: String, enum: ['super_admin','admin','user','viewer'], default: 'user' },
   mobile:           { type: String, trim: true, sparse: true },
-  firebaseUid:      { type: String, sparse: true }, // Firebase UID for phone auth linking
-  authMethods:      [{ type: String, enum: ['password','otp'] }], // which login methods this user has
+  firebaseUid:      { type: String, sparse: true }, // Firebase UID for phone auth
+  googleUid:        { type: String, sparse: true }, // Firebase UID for Google auth
+  authMethods:      [{ type: String, enum: ['password','otp','google'] }], // which login methods this user has
   otpLoginsToday:   { type: Number, default: 0 },
   lastOtpLoginDate: { type: String },    // YYYY-MM-DD
   isActive:         { type: Boolean, default: true },
@@ -20,6 +21,7 @@ const userSchema = new mongoose.Schema({
 userSchema.index({ email: 1 });
 userSchema.index({ mobile: 1 }, { sparse: true });   // fast OTP lookup
 userSchema.index({ firebaseUid: 1 }, { sparse: true });
+userSchema.index({ googleUid: 1 }, { sparse: true });
 userSchema.index({ deletedAt: 1 });
 
 userSchema.methods.checkPassword = async function(plain) {

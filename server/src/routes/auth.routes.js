@@ -448,6 +448,123 @@ router.post('/otp/login',
   }
 );
 
+// ── Google Sign-In ─────────────────────────────────────────────────────────────
+router.post('/google/login',
+  authLimiter,
+  [ body('idToken').notEmpty() ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { idToken, mobile: rawMobile, deviceInfo: bodyDeviceInfo } = req.body;
+
+      // ── 1. Verify Firebase Google ID Token ───────────────────────────────
+      const decodedHeader = jwt.decode(idToken, { complete: true });
+      if (!decodedHeader?.header?.kid) {
+        return res.status(401).json({ error: 'Invalid token format' });
+      }
+
+      // Fetch Google's public keys (same endpoint as phone auth — Firebase tokens)
+      const keysRes = await axios.get('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+      const publicKey = keysRes.data[decodedHeader.header.kid];
+      if (!publicKey) return res.status(401).json({ error: 'Invalid token signature' });
+
+      const decoded = jwt.verify(idToken, publicKey, { algorithms: ['RS256'] });
+
+      const googleUid  = decoded.uid;
+      const email      = decoded.email;
+      const name       = decoded.name || decoded.email?.split('@')[0] || 'User';
+
+      if (!email) return res.status(400).json({ error: 'No email in Google token' });
+
+      // ── 2. Find existing user ────────────────────────────────────────────
+      let user = null;
+      let isNewUser = false;
+
+      // Priority 1: by googleUid
+      user = await User.findOne({ googleUid, deletedAt: null });
+
+      // Priority 2: by email (user registered with email/password before)
+      if (!user) {
+        user = await User.findOne({ email, deletedAt: null });
+      }
+
+      // ── 3. New user — require mobile before creating account ─────────────
+      if (!user) {
+        // If mobile not provided yet, tell frontend to ask for it
+        if (!rawMobile) {
+          return res.json({ needsMobile: true, email, name });
+        }
+
+        // Validate and normalise mobile
+        let mobile = (rawMobile || '').replace(/[\s\-]/g, '');
+        if (mobile.length < 10) return res.status(400).json({ error: 'Enter a valid mobile number (10+ digits)' });
+        if (!mobile.startsWith('+')) {
+          mobile = mobile.length === 10 ? '+91' + mobile : '+' + mobile;
+        }
+
+        // Block duplicate mobile
+        const mobileExists = await User.findOne({ mobile, deletedAt: null });
+        if (mobileExists) return res.status(409).json({ error: 'This mobile number is already registered with another account' });
+
+        isNewUser = true;
+        user = await User.create({
+          email,
+          passwordHash: await User.hashPassword(require('crypto').randomBytes(32).toString('hex')),
+          name,
+          mobile,
+          googleUid,
+          authMethods: ['google'],
+          isActive: true
+        });
+        await Settings.create({ userId: user._id, bizName: name, userName: name, phone: mobile });
+        await _createTrial(user._id);
+        await audit({ userId: user._id, action: 'REGISTER_GOOGLE', resource: 'User', details: { email, mobile }, req });
+
+      } else {
+        // ── 4. Existing user — link googleUid if not already linked ─────────
+        const updates = {};
+        if (!user.googleUid) updates.googleUid = googleUid;
+        if (!user.authMethods?.includes('google')) updates.$addToSet = { authMethods: 'google' };
+        if (Object.keys(updates).length) await User.findByIdAndUpdate(user._id, updates);
+      }
+
+      if (!user.isActive) return res.status(403).json({ error: 'Account deactivated. Contact support.' });
+
+      user.lastLoginAt = new Date();
+      await user.save();
+
+      // ── 5. Issue tokens + session ────────────────────────────────────────
+      const deviceInfo   = getDeviceInfo(req, bodyDeviceInfo);
+      const accessToken  = signAccess(user);
+      const refreshToken = signRefresh(user);
+      const exp = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+
+      await Session.create({
+        userId:            user._id,
+        refreshToken,
+        deviceFingerprint: deviceInfo.fingerprint,
+        deviceName:        deviceInfo.name,
+        deviceInfo,
+        ip:                req.ip,
+        expiresAt:         exp
+      });
+
+      res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTS);
+      await audit({ userId: user._id, action: 'LOGIN_GOOGLE', resource: 'User', details: { email, isNewUser }, req });
+
+      res.json({
+        accessToken,
+        isNewUser,
+        user: { id: user._id, email: user.email, name: user.name, role: user.role, mobile: user.mobile }
+      });
+
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') return res.status(401).json({ error: 'Google session expired. Please sign in again.' });
+      next(err);
+    }
+  }
+);
+
 // ── Logout (clears cookie + revokes session) ──────────────────────────────────
 router.post('/logout', protect, async (req, res, next) => {
   try {
