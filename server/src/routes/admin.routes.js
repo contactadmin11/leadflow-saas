@@ -285,7 +285,7 @@ router.put('/users/:id/max-devices', async (req, res, next) => {
 router.get('/users-devices', async (req, res, next) => {
   try {
     const users = await User.find({ deletedAt: null })
-      .select('name email lastLoginAt isActive createdAt').lean();
+      .select('name email mobile lastLoginAt isActive createdAt').lean();
 
     const userIds = users.map(u => u._id);
     const [sessions, subs] = await Promise.all([
