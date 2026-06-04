@@ -44,7 +44,8 @@ const app = express();
 // ── Security middleware ────────────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: false, // disabled for API server
-  crossOriginResourcePolicy: { policy: 'cross-origin' }
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginOpenerPolicy: false // required for Firebase Auth popup to work
 }));
 
 // ── CORS ──────────────────────────────────────────────────────────────────
