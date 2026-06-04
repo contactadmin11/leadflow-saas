@@ -498,6 +498,13 @@ router.post('/google/login',
         // Validate and normalise mobile
         let mobile = (rawMobile || '').replace(/[\s\-]/g, '');
         if (mobile.length < 10) return res.status(400).json({ error: 'Enter a valid mobile number (10+ digits)' });
+        
+        // Prevent common fake patterns
+        const repetitive = /^(\d)\1{6,}$/; 
+        const sequential = /^(1234567|9876543|0123456)/;
+        if(repetitive.test(mobile) || sequential.test(mobile)) {
+          return res.status(400).json({ error: 'Please enter a valid real mobile number' });
+        }
         if (!mobile.startsWith('+')) {
           mobile = mobile.length === 10 ? '+91' + mobile : '+' + mobile;
         }

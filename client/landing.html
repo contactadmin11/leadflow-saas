@@ -675,6 +675,13 @@ async function _submitGoogleWithMobile(idToken, apiBase, fp, dn) {
 
   let mobile = (mobileRaw||'').replace(/[\s\-]/g,'');
   if(mobile.length < 10){ if(errEl){errEl.textContent='Enter a valid 10+ digit mobile number';errEl.style.display='block';} return; }
+  
+  // Prevent common fake patterns
+  const repetitive = /^(\d)\1{6,}$/; 
+  const sequential = /^(1234567|9876543|0123456)/;
+  if(repetitive.test(mobile) || sequential.test(mobile)) {
+    if(errEl){errEl.textContent='Please enter a valid real mobile number';errEl.style.display='block';} return;
+  }
   if(!mobile.startsWith('+')){ mobile = mobile.length===10 ? '+91'+mobile : '+'+mobile; }
 
   btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creating account...';
