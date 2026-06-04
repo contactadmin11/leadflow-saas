@@ -463,14 +463,25 @@ router.post('/google/login',
         return res.status(401).json({ error: 'Invalid token format' });
       }
 
-      // Fetch Google's public keys (same endpoint as phone auth — Firebase tokens)
-      const keysRes = await axios.get('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
-      const publicKey = keysRes.data[decodedHeader.header.kid];
-      if (!publicKey) return res.status(401).json({ error: 'Invalid token signature' });
+      // Fetch Google's public keys (try Firebase first, then standard Google OAuth)
+      let publicKey;
+      try {
+        const keysRes = await axios.get('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+        publicKey = keysRes.data[decodedHeader.header.kid];
+      } catch(e) {}
+
+      if (!publicKey) {
+        try {
+          const keysRes2 = await axios.get('https://www.googleapis.com/oauth2/v1/certs');
+          publicKey = keysRes2.data[decodedHeader.header.kid];
+        } catch(e) {}
+      }
+      
+      if (!publicKey) return res.status(401).json({ error: 'Invalid token signature (Key not found)' });
 
       const decoded = jwt.verify(idToken, publicKey, { algorithms: ['RS256'] });
 
-      const googleUid  = decoded.uid;
+      const googleUid  = decoded.uid || decoded.sub;
       const email      = decoded.email;
       const name       = decoded.name || decoded.email?.split('@')[0] || 'User';
 
