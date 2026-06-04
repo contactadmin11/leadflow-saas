@@ -475,8 +475,8 @@ window.doRegister = async function() {
   const restored = await API.restoreSession().catch(() => false);
 
   if (!API.isLoggedIn() && !restored) {
-    // No session → show login screen
-    document.addEventListener('DOMContentLoaded', () => { showLoginScreen(); });
+    // No session → redirect to landing page for login (no duplicate login screen)
+    window.location.href = '/';
     return;
   }
 

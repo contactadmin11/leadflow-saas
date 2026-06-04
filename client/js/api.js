@@ -202,7 +202,7 @@ const API = {
     return data;
   },
 
-  async register(email, password, name) {
+  async register(email, password, name, mobile) {
     const fp  = _deviceFingerprint || (await window.LeadFlowDevice?.getFingerprint().catch(() => null));
     const dn  = _deviceName || window.LeadFlowDevice?.getDeviceName() || 'Browser';
     const info = window.LeadFlowDevice?.getDeviceInfo() || {};
@@ -215,7 +215,7 @@ const API = {
         ...(window.LEADFLOW_APP_SECRET ? { 'X-App-Secret': window.LEADFLOW_APP_SECRET } : {})
       },
       credentials: 'include',
-      body:        JSON.stringify({ email, password, name, deviceInfo: info })
+      body:        JSON.stringify({ email, password, name, mobile, deviceInfo: info })
     });
 
     const data = await resp.json().catch(() => ({ error: 'Server error' }));

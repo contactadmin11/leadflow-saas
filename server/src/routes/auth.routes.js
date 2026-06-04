@@ -76,20 +76,39 @@ router.post('/register',
   [
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
-    body('name').trim().notEmpty().withMessage('Name is required')
+    body('name').trim().notEmpty().withMessage('Name is required'),
+    body('mobile').trim().notEmpty().withMessage('Mobile number is required')
   ],
   validate,
   async (req, res, next) => {
     try {
-      const { email, password, name, deviceInfo: bodyDeviceInfo } = req.body;
+      const { email, password, name, mobile, deviceInfo: bodyDeviceInfo } = req.body;
+
+      // Validate mobile format
+      let cleanMobile = (mobile || '').replace(/[\s\-]/g, '');
+      if (cleanMobile.length < 10) return res.status(400).json({ error: 'Enter a valid mobile number (10+ digits)' });
+      // Ensure +91 prefix for Indian numbers
+      if (!cleanMobile.startsWith('+')) {
+        if (cleanMobile.length === 10) cleanMobile = '+91' + cleanMobile;
+        else cleanMobile = '+' + cleanMobile;
+      }
+
       const exists = await User.findOne({ email });
       if (exists) return res.status(409).json({ error: 'Email already registered' });
 
+      // Check if mobile is already used
+      const mobileExists = await User.findOne({ mobile: cleanMobile, deletedAt: null });
+      if (mobileExists) return res.status(409).json({ error: 'This mobile number is already registered with another account' });
+
       const passwordHash = await User.hashPassword(password);
-      const user         = await User.create({ email, passwordHash, name });
+      const user = await User.create({
+        email, passwordHash, name,
+        mobile: cleanMobile,
+        authMethods: ['password']
+      });
 
       // Create settings + 14-day trial
-      await Settings.create({ userId: user._id, bizName: name, userName: name });
+      await Settings.create({ userId: user._id, bizName: name, userName: name, phone: cleanMobile });
       await _createTrial(user._id);
 
       const deviceInfo = getDeviceInfo(req, bodyDeviceInfo);
@@ -112,8 +131,8 @@ router.post('/register',
 
       await audit({ userId: user._id, action: 'REGISTER', resource: 'User', req });
       res.status(201).json({
-        accessToken,  // Only access token in body
-        user: { id: user._id, email: user.email, name: user.name, role: user.role },
+        accessToken,
+        user: { id: user._id, email: user.email, name: user.name, role: user.role, mobile: user.mobile },
         subscription: { plan: 'trial', daysRemaining: 14 }
       });
     } catch (err) { next(err); }

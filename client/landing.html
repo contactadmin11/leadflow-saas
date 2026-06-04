@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -532,7 +532,7 @@ footer{padding:48px 40px;border-top:1px solid var(--border);display:flex;justify
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
 <script>
-// ── Auth Modal ──────────────────────────────────────────────────────────────
+// == Auth Modal ==
 function showAuthModal(mode) {
   document.getElementById('authModalOverlay').classList.add('show');
   renderAuthModal(mode);
@@ -543,10 +543,10 @@ document.getElementById('authModalOverlay').onclick = function(e){ if(e.target==
 function renderAuthModal(mode) {
   const isLogin = mode === 'login';
   const isOtp   = mode === 'otp';
-  
+
   if (isOtp) {
     document.getElementById('authModalContent').innerHTML = `
-      <div class="trial-badge"><i class="fas fa-mobile-alt"></i> Fast & Secure Login</div>
+      <div class="trial-badge"><i class="fas fa-mobile-alt"></i> Fast &amp; Secure Login</div>
       <h2>Login via OTP</h2>
       <p class="sub">Enter your registered mobile number</p>
       <div id="otpStep1">
@@ -561,12 +561,12 @@ function renderAuthModal(mode) {
         <input class="auth-input" id="authOtpCode" type="text" placeholder="Enter 6-digit OTP" maxlength="6">
         <div class="auth-err" id="authErr2"></div>
         <button class="auth-btn" id="verifyOtpBtn" onclick="doVerifyOtp()">
-          <i class="fas fa-sign-in-alt"></i> Verify & Login
+          <i class="fas fa-sign-in-alt"></i> Verify &amp; Login
         </button>
       </div>
       <div id="recaptcha-container"></div>
       <div class="auth-switch">
-        <a onclick="renderAuthModal('login')" style="cursor:pointer;color:#3b82f6;text-decoration:underline">← Back to Password Login</a>
+        <a onclick="renderAuthModal('login')" style="cursor:pointer;color:#3b82f6;text-decoration:underline">&larr; Back to Password Login</a>
       </div>
     `;
     setTimeout(()=>document.getElementById('authMobile')?.focus(),100);
@@ -574,15 +574,16 @@ function renderAuthModal(mode) {
   }
 
   document.getElementById('authModalContent').innerHTML = `
-    <div class="trial-badge"><i class="fas fa-gift"></i> 7 Days Free — No Card Needed</div>
+    <div class="trial-badge"><i class="fas fa-gift"></i> 7 Days Free &mdash; No Card Needed</div>
     <h2>${isLogin ? 'Welcome Back' : 'Create Your Account'}</h2>
     <p class="sub">${isLogin ? 'Sign in to your LeadFlow dashboard' : 'Start your free 7-day trial instantly'}</p>
-    ${!isLogin ? `<input class="auth-input" id="authName" placeholder="Your Full Name" autocomplete="name">` : ''}
-    <input class="auth-input" id="authEmail" type="email" placeholder="Email Address" autocomplete="email">
-    <input class="auth-input" id="authPass" type="password" placeholder="Password ${isLogin?'':' (min 8 characters)'}" autocomplete="${isLogin?'current-password':'new-password'}">
+    ${!isLogin ? '<input class="auth-input" id="authName" placeholder="Your Full Name *" autocomplete="name">' : ''}
+    <input class="auth-input" id="authEmail" type="email" placeholder="Email Address *" autocomplete="email">
+    ${!isLogin ? '<input class="auth-input" id="authMobileReg" type="tel" placeholder="Mobile Number * (for OTP recovery)" autocomplete="tel" maxlength="15">' : ''}
+    <input class="auth-input" id="authPass" type="password" placeholder="Password ${isLogin ? '' : '(min 8 chars) *'}" autocomplete="${isLogin ? 'current-password' : 'new-password'}">
     <div class="auth-err" id="authErr"></div>
-    <button class="auth-btn" id="authSubmitBtn" onclick="${isLogin?'doAuthLogin()':'doAuthRegister()'}">
-      <i class="fas fa-${isLogin?'sign-in-alt':'rocket'}"></i> ${isLogin?'Sign In':'Start Free Trial'}
+    <button class="auth-btn" id="authSubmitBtn" onclick="${isLogin ? 'doAuthLogin()' : 'doAuthRegister()'}">
+      <i class="fas fa-${isLogin ? 'sign-in-alt' : 'rocket'}"></i> ${isLogin ? 'Sign In' : 'Start Free Trial'}
     </button>
     ${isLogin ? `
       <div style="margin-top:12px">
@@ -592,13 +593,13 @@ function renderAuthModal(mode) {
       </div>
     ` : ''}
     <div class="auth-switch">${isLogin
-      ? 'New here? <a onclick="renderAuthModal(\'register\')">Create free account →</a>'
-      : 'Already have an account? <a onclick="renderAuthModal(\'login\')">Sign in →</a>'
+      ? 'New here? <a onclick="renderAuthModal(\'register\')">Create free account &rarr;</a>'
+      : 'Already have an account? <a onclick="renderAuthModal(\'login\')">Sign in &rarr;</a>'
     }</div>
   `;
   setTimeout(()=>document.getElementById('authEmail')?.focus(),100);
-  document.addEventListener('keydown',function handler(e){
-    if(e.key==='Enter'){isLogin?doAuthLogin():doAuthRegister();document.removeEventListener('keydown',handler);}
+  document.addEventListener('keydown', function handler(e){
+    if(e.key==='Enter'){ isLogin ? doAuthLogin() : doAuthRegister(); document.removeEventListener('keydown',handler); }
   });
 }
 
@@ -607,77 +608,89 @@ async function doAuthLogin() {
   const pass  = document.getElementById('authPass')?.value?.trim();
   const errEl = document.getElementById('authErr');
   const btn   = document.getElementById('authSubmitBtn');
-  if(!email||!pass){showAuthErr('Please fill all fields');return;}
-  btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Signing in...';
+  if(!email||!pass){ showAuthErr('Please fill all fields'); return; }
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Signing in...';
   errEl.style.display='none';
   try {
     const data = await API.login(email, pass);
     _postLogin(data);
-  } catch(e) { showAuthErr(e.message||'Login failed'); btn.disabled=false;btn.innerHTML='<i class="fas fa-sign-in-alt"></i> Sign In'; }
+  } catch(e) {
+    showAuthErr(e.message||'Login failed');
+    btn.disabled=false;
+    btn.innerHTML='<i class="fas fa-sign-in-alt"></i> Sign In';
+  }
 }
 
 async function doAuthRegister() {
-  const name  = document.getElementById('authName')?.value?.trim();
-  const email = document.getElementById('authEmail')?.value?.trim();
-  const pass  = document.getElementById('authPass')?.value?.trim();
-  const btn   = document.getElementById('authSubmitBtn');
-  if(!name||!email||!pass){showAuthErr('Please fill all fields');return;}
-  if(pass.length<8){showAuthErr('Password must be at least 8 characters');return;}
-  btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creating account...';
+  const name   = document.getElementById('authName')?.value?.trim();
+  const email  = document.getElementById('authEmail')?.value?.trim();
+  const mobile = document.getElementById('authMobileReg')?.value?.trim();
+  const pass   = document.getElementById('authPass')?.value?.trim();
+  const btn    = document.getElementById('authSubmitBtn');
+
+  if(!name||!email||!mobile||!pass){ showAuthErr('All fields are required including mobile number'); return; }
+
+  // Validate mobile
+  const cleanMobile = mobile.replace(/[\s\-]/g, '');
+  if(cleanMobile.length < 10){ showAuthErr('Enter a valid 10+ digit mobile number'); return; }
+  if(pass.length < 8){ showAuthErr('Password must be at least 8 characters'); return; }
+
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creating account...';
   try {
-    const data = await API.register(email, pass, name);
+    const data = await API.register(email, pass, name, cleanMobile);
     _postLogin(data);
-  } catch(e) { showAuthErr(e.message||'Registration failed'); btn.disabled=false;btn.innerHTML='<i class="fas fa-rocket"></i> Start Free Trial'; }
+  } catch(e) {
+    showAuthErr(e.message||'Registration failed');
+    btn.disabled=false;
+    btn.innerHTML='<i class="fas fa-rocket"></i> Start Free Trial';
+  }
 }
 
 function showAuthErr(msg) {
-  const el=document.getElementById('authErr');
-  if(el){el.textContent=msg;el.style.display='block';}
+  const el = document.getElementById('authErr');
+  if(el){ el.textContent = msg; el.style.display = 'block'; }
 }
 
 function _postLogin(data) {
   closeAuthModal();
-  // Redirect to the main CRM app
   window.location.href = '/index.html';
 }
 
-// ── Buy Inquiry Modal ────────────────────────────────────────────────────────
+// == Buy Inquiry Modal ==
 function openBuyModal(plan, price) {
   const planLabels = { monthly:'Monthly', quarterly:'Quarterly', yearly:'Yearly' };
   const planName = planLabels[plan] || plan;
-  // Pre-fill email if logged in
   const userEmail = (typeof API !== 'undefined' && API.getUser) ? (API.getUser()?.email || '') : '';
 
-  // Create modal if not exists
   let overlay = document.getElementById('buyModalOverlay');
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.id = 'buyModalOverlay';
-    overlay.innerHTML = `<div class="buy-modal" id="buyModalBox"><button class="modal-close-btn" onclick="closeBuyModal()">×</button><div id="buyModalContent"></div></div>`;
+    overlay.innerHTML = '<div class="buy-modal" id="buyModalBox"><button class="modal-close-btn" onclick="closeBuyModal()">&times;</button><div id="buyModalContent"></div></div>';
     overlay.onclick = function(e){ if(e.target===this) closeBuyModal(); };
     document.body.appendChild(overlay);
   }
 
   document.getElementById('buyModalContent').innerHTML = `
-    <div class="plan-badge">📦 ${planName} Plan — ${price}</div>
+    <div class="plan-badge">${planName} Plan &mdash; ${price}</div>
     <h2 style="margin-bottom:6px">Complete Your Order</h2>
     <p style="color:var(--text2);font-size:13px;margin-bottom:20px">Fill in your details and we'll contact you within 2 hours to activate your account.</p>
     <input class="buy-input" id="buyName" placeholder="Your Full Name *" required>
     <input class="buy-input" id="buyEmail" type="email" placeholder="Email Address *" value="${userEmail}" required>
     <input class="buy-input" id="buyMobile" type="tel" placeholder="Mobile / WhatsApp Number *" required>
     <select class="buy-select" id="buyPlan">
-      <option value="Monthly — ₹299/month" ${plan==='monthly'?'selected':''}>Monthly — ₹299/month (was ₹499)</option>
-      <option value="Quarterly — ₹749/quarter" ${plan==='quarterly'?'selected':''}>Quarterly — ₹749/quarter (was ₹1,299)</option>
-      <option value="Yearly — ₹2,900/year" ${plan==='yearly'?'selected':''}>Yearly — ₹2,900/year (was ₹3,999)</option>
+      <option value="Monthly - Rs299/month" ${plan==='monthly'?'selected':''}>Monthly - Rs299/month (was Rs499)</option>
+      <option value="Quarterly - Rs749/quarter" ${plan==='quarterly'?'selected':''}>Quarterly - Rs749/quarter (was Rs1,299)</option>
+      <option value="Yearly - Rs2,900/year" ${plan==='yearly'?'selected':''}>Yearly - Rs2,900/year (was Rs3,999)</option>
     </select>
-    <input class="buy-input" id="buyUsers" type="number" min="1" max="20" placeholder="No. of users (extra users ₹149/month each)" value="1">
+    <input class="buy-input" id="buyUsers" type="number" min="1" max="20" placeholder="No. of users (extra users Rs149/month each)" value="1">
     <input class="buy-input" id="buyGst" placeholder="GST Number (optional, for GST invoice)">
     <div id="buyErr" style="color:#f87171;font-size:13px;margin-bottom:10px;display:none"></div>
     <button class="buy-btn" id="buySubmitBtn" onclick="submitBuyForm()">
-      <i class="fas fa-paper-plane"></i> Send Inquiry — We'll Contact You!
+      <i class="fas fa-paper-plane"></i> Send Inquiry
     </button>
-    <p style="font-size:11px;color:var(--text2);text-align:center;margin-top:12px">🔒 Your details are safe. We'll WhatsApp/call you within 2 hours.</p>
+    <p style="font-size:11px;color:var(--text2);text-align:center;margin-top:12px">Your details are safe. We'll WhatsApp/call you within 2 hours.</p>
   `;
   overlay.classList.add('show');
 }
@@ -688,40 +701,35 @@ function closeBuyModal() {
 }
 
 function submitBuyForm() {
-  const name    = document.getElementById('buyName')?.value?.trim();
-  const email   = document.getElementById('buyEmail')?.value?.trim();
-  const mobile  = document.getElementById('buyMobile')?.value?.trim();
-  const plan    = document.getElementById('buyPlan')?.value;
-  const users   = document.getElementById('buyUsers')?.value || '1';
-  const gst     = document.getElementById('buyGst')?.value?.trim();
-  const errEl   = document.getElementById('buyErr');
-  const btn     = document.getElementById('buySubmitBtn');
+  const name   = document.getElementById('buyName')?.value?.trim();
+  const email  = document.getElementById('buyEmail')?.value?.trim();
+  const mobile = document.getElementById('buyMobile')?.value?.trim();
+  const plan   = document.getElementById('buyPlan')?.value;
+  const users  = document.getElementById('buyUsers')?.value || '1';
+  const gst    = document.getElementById('buyGst')?.value?.trim();
+  const errEl  = document.getElementById('buyErr');
+  const btn    = document.getElementById('buySubmitBtn');
 
-  if (!name)   { errEl.textContent='Please enter your name'; errEl.style.display='block'; return; }
-  if (!email)  { errEl.textContent='Please enter your email'; errEl.style.display='block'; return; }
-  if (!mobile) { errEl.textContent='Please enter your mobile number'; errEl.style.display='block'; return; }
+  if (!name)  { errEl.textContent='Please enter your name'; errEl.style.display='block'; return; }
+  if (!email) { errEl.textContent='Please enter your email'; errEl.style.display='block'; return; }
+  if (!mobile){ errEl.textContent='Please enter your mobile number'; errEl.style.display='block'; return; }
   errEl.style.display = 'none';
-
   btn.innerHTML = '<i class="fas fa-check"></i> Details Saved';
 
-  const subject = encodeURIComponent(`LeadFlow OS Purchase Inquiry — ${plan}`);
+  const subject = encodeURIComponent('LeadFlow OS Purchase Inquiry - ' + plan);
   const body = encodeURIComponent(
-    `New Purchase Inquiry — LeadFlow OS\n` +
-    `================================\n` +
-    `Name    : ${name}\n` +
-    `Email   : ${email}\n` +
-    `Mobile  : ${mobile}\n` +
-    `Plan    : ${plan}\n` +
-    `Users   : ${users} user(s)\n` +
-    `GST No. : ${gst || 'Not provided'}\n` +
-    `================================\n` +
-    `Sent from LeadFlow OS landing page`
+    'New Purchase Inquiry\n' +
+    '================================\n' +
+    'Name    : ' + name + '\n' +
+    'Email   : ' + email + '\n' +
+    'Mobile  : ' + mobile + '\n' +
+    'Plan    : ' + plan + '\n' +
+    'Users   : ' + users + ' user(s)\n' +
+    'GST No. : ' + (gst || 'Not provided') + '\n' +
+    '================================\n'
   );
+  window.open('https://mail.google.com/mail/?view=cm&fs=1&to=contactadmin11@gmail.com&su=' + subject + '&body=' + body, '_blank');
 
-  // Open Gmail web client
-  window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=contactadmin11@gmail.com&su=${subject}&body=${body}`, '_blank');
-
-  // Show instructions
   setTimeout(() => {
     document.getElementById('buyModalContent').innerHTML = `
       <div class="buy-success">
@@ -735,20 +743,19 @@ function submitBuyForm() {
   }, 400);
 }
 
-// Keep old startCheckout for paywall compatibility
 function startCheckout(plan) {
-  const priceMap = { monthly:'₹299/month', quarterly:'₹749/quarter', yearly:'₹2,900/year' };
+  const priceMap = { monthly:'Rs299/month', quarterly:'Rs749/quarter', yearly:'Rs2,900/year' };
   openBuyModal(plan, priceMap[plan] || '');
 }
 
-// ── Paywall ──────────────────────────────────────────────────────────────────
+// == Paywall ==
 function showPaywall(msg) {
   if(msg) document.getElementById('paywallMsg').textContent = msg;
   document.getElementById('paywallOverlay').classList.add('show');
 }
 function closePaywall() { document.getElementById('paywallOverlay').classList.remove('show'); }
 
-// ── FAQ toggle ───────────────────────────────────────────────────────────────
+// == FAQ toggle ==
 function toggleFaq(el) {
   const item = el.parentElement;
   const isOpen = item.classList.contains('open');
@@ -756,13 +763,13 @@ function toggleFaq(el) {
   if (!isOpen) item.classList.add('open');
 }
 
-// ── Scroll reveal ─────────────────────────────────────────────────────────────
+// == Scroll reveal ==
 const observer = new IntersectionObserver(entries => {
   entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
 }, { threshold: 0.1 });
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-// ── If already logged in → show Go to App button ─────────────────────────────
+// == If already logged in, show Go to App button ==
 if (API.isLoggedIn()) {
   const cta = document.querySelector('.nav-cta');
   if (cta) cta.innerHTML = `
@@ -771,8 +778,7 @@ if (API.isLoggedIn()) {
     </button>`;
 }
 
-
-// ── FIREBASE OTP LOGIC ────────────────────────────────────────────────────────
+// == FIREBASE OTP LOGIC ==
 window.confirmationResult = null;
 
 function initFirebaseOTP() {
@@ -819,15 +825,13 @@ async function doSendOtp() {
     setTimeout(() => document.getElementById('authOtpCode')?.focus(), 100);
   } catch (error) {
     let msg = error.message || 'Failed to send OTP';
-    // Translate Firebase error codes into human-readable messages
     if (error.code === 'auth/operation-not-allowed') {
-      msg = '⚙️ Phone Auth not enabled. Go to Firebase Console → Authentication → Sign-in method → Phone → Enable it.';
+      msg = 'Phone Auth not enabled. Go to Firebase Console > Authentication > Sign-in method > Phone > Enable it.';
     } else if (error.code === 'auth/invalid-phone-number') {
       msg = 'Invalid phone number. Use format: 9876543210 or +919876543210';
     } else if (error.code === 'auth/too-many-requests') {
       msg = 'Too many attempts. Please wait a few minutes and try again.';
     } else if (error.code === 'auth/captcha-check-failed') {
-      // Reset recaptcha and retry
       window.recaptchaVerifier = null;
       initFirebaseOTP();
       msg = 'Verification failed. Please try again.';
@@ -853,40 +857,35 @@ async function doVerifyOtp() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
 
   try {
-    // 1. Verify OTP with Firebase
     const result  = await window.confirmationResult.confirm(code);
     const idToken = await result.user.getIdToken();
 
-    // 2. Send to backend — creates session + httpOnly cookie
     const fp  = window.LeadFlowDevice ? await window.LeadFlowDevice.getFingerprint().catch(() => null) : null;
     const dn  = window.LeadFlowDevice ? window.LeadFlowDevice.getDeviceName() : 'Browser';
     const apiBase = window.LEADFLOW_API_URL || (window.location.origin + '/api');
 
-    const res = await fetch(`${apiBase}/auth/otp/login`, {
+    const res = await fetch(apiBase + '/auth/otp/login', {
       method:      'POST',
       headers:     {
         'Content-Type': 'application/json',
         ...(fp ? { 'X-Device-ID': fp, 'X-Device-Name': dn } : {})
       },
-      credentials: 'include',   // sets httpOnly refresh cookie
+      credentials: 'include',
       body: JSON.stringify({ idToken, deviceInfo: { name: dn } })
     });
     const data = await res.json();
     if (!data.accessToken) throw new Error(data.error || 'Login failed');
 
-    // 3. Store tokens securely in memory
     API.setAccessToken(data.accessToken);
     API.setUser(data.user);
 
-    // 4. New OTP user — ask for their name before entering the app
     if (data.isNewUser) {
-      const name = prompt(`Welcome! You've been registered via OTP.\nEnter your name to personalize your account:`, `User ${(data.user.mobile || '').slice(-4)}`);
+      const name = prompt('Welcome! You have been registered via OTP.\nEnter your name to personalize your account:', 'User ' + (data.user.mobile || '').slice(-4));
       if (name && name.trim()) {
-        // Update name in backend
         try {
-          await fetch(`${apiBase}/auth/update-profile`, {
+          await fetch(apiBase + '/auth/update-profile', {
             method:  'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${data.accessToken}` },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + data.accessToken },
             body:    JSON.stringify({ name: name.trim() })
           });
           data.user.name = name.trim();
@@ -895,19 +894,17 @@ async function doVerifyOtp() {
       }
     }
 
-    // 5. Go to the CRM app directly — no intermediate page
     _postLogin(data);
   } catch (error) {
     let msg = error.message || 'Invalid OTP';
     if (error.code === 'auth/invalid-verification-code') msg = 'Wrong OTP. Please check and try again.';
-    if (error.code === 'auth/code-expired')             msg = 'OTP expired. Please go back and request a new one.';
+    if (error.code === 'auth/code-expired') msg = 'OTP expired. Please go back and request a new one.';
     if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Verify & Login';
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Verify &amp; Login';
   }
 }
+
 </script>
 </body>
 </html>
-
-
