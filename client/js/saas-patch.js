@@ -483,7 +483,7 @@ window.doRegister = async function() {
   const user = API.getUser();
   window.currentUser = user?.name || user?.email || 'User';
 
-  document.addEventListener('DOMContentLoaded', async () => {
+  const bootApp = async () => {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appContainer').style.display = 'block';
     const avatarEl = document.getElementById('topbarAvatar');
@@ -499,7 +499,13 @@ window.doRegister = async function() {
 
     // Check subscription status
     _checkSubscription();
-  });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootApp);
+  } else {
+    bootApp();
+  }
 })();
 
 // ── Subscription: check status + show banner/paywall ────────────────────────
