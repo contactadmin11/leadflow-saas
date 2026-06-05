@@ -1195,14 +1195,7 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
     <!-- AI PROVIDER SETTINGS CARD -->
     <div class="card" style="grid-column:1/-1">
       <div class="card-title"><i class="fas fa-envelope-open-text" style="color:#3b82f6"></i> Email Integration — Auto-Send with PDF Attachment (EmailJS)</div>
-      <div style="background:#eff6ff;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#1e40af">
-        <strong>📧 How to set up FREE email sending with PDF attachment:</strong><br>
-        1. Go to <a href="https://www.emailjs.com" target="_blank" style="color:#2563eb;font-weight:700">emailjs.com</a> → Create free account (200 emails/month free)<br>
-        2. Add an Email Service (Gmail / Outlook / Yahoo) → copy the <strong>Service ID</strong><br>
-        3. Create a Template → use variables: <code>{{to_email}}</code>, <code>{{to_name}}</code>, <code>{{subject}}</code>, <code>{{message}}</code>, <code>{{from_name}}</code> → copy <strong>Template ID</strong><br>
-        4. Go to Account → copy your <strong>Public Key</strong><br>
-        5. Paste all three below and click Save Settings
-      </div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
         <div class="form-group"><label>EmailJS Service ID</label><input type="text" id="setEjsService" placeholder="service_xxxxxxx"></div>
         <div class="form-group"><label>EmailJS Template ID</label><input type="text" id="setEjsTemplate" placeholder="template_xxxxxxx"></div>
@@ -1210,16 +1203,8 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
       </div>
       <button class="btn btn-secondary btn-sm" onclick="testEmailJS()" style="margin-top:4px"><i class="fas fa-vial"></i> Test Email Connection</button>
     </div>
-    <!-- WHATSAPP LOCAL SERVER CARD -->
     <div class="card" style="grid-column:1/-1">
-      <div class="card-title"><i class="fab fa-whatsapp" style="color:#25d366"></i> WhatsApp Setup — Same Browser (No Python needed)</div>
-      <div style="background:#f0fdf4;border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:13px;color:#166534;line-height:1.8">
-        <strong>✅ Zero setup — works right now:</strong><br>
-        <strong>Step 1:</strong> Click <strong>"Open WhatsApp Web"</strong> button below → WhatsApp opens in a new tab in this same browser<br>
-        <strong>Step 2:</strong> Scan QR code once with your phone → stays linked forever in this browser<br>
-        <strong>Step 3:</strong> Now every Send button → PDF downloads automatically + WhatsApp opens to that contact's chat<br>
-        <strong>Step 4:</strong> In WhatsApp tab → click 📎 → Document → select the PDF (it's the newest file in Downloads) → Send ✅
-      </div>
+      <div class="card-title"><i class="fab fa-whatsapp" style="color:#25d366"></i> WhatsApp — Same Browser</div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-success" onclick="openWATab()"><i class="fab fa-whatsapp"></i> Open WhatsApp Web (same browser)</button>
         <div id="waServerStatus" style="padding:8px 16px;border-radius:8px;font-weight:600;font-size:13px;background:#eff6ff;color:#1e40af">
@@ -1229,15 +1214,7 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
       </div>
     </div>
     <div class="card" style="grid-column:1/-1">
-      <div class="card-title"><i class="fab fa-whatsapp" style="color:#25d366"></i> WhatsApp Auto-Send — Node.js Server (100% Free, PDF Auto-Attaches)</div>
-      <div style="background:#f0fdf4;border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:13px;color:#166534;line-height:1.8">
-        <strong>🆓 Zero cost — PDF attaches automatically, no manual steps:</strong><br>
-        <strong>Step 1:</strong> Install <a href="https://nodejs.org" target="_blank" style="color:#16a34a;font-weight:700">Node.js LTS</a> from nodejs.org (keep all defaults)<br>
-        <strong>Step 2:</strong> Put <strong>leadflow_node_server.js</strong>, <strong>package.json</strong>, <strong>install_and_start.bat</strong> in a folder<br>
-        <strong>Step 3:</strong> Double-click <strong>install_and_start.bat</strong> → QR code appears in terminal<br>
-        <strong>Step 4:</strong> WhatsApp → Linked Devices → Link a Device → Scan QR (once, saved forever)<br>
-        <strong>Step 5:</strong> LeadFlow → Settings → Check Server → Green ✅ → Done!
-      </div>
+      <div class="card-title"><i class="fab fa-whatsapp" style="color:#25d366"></i> WhatsApp Auto-Send — Node.js Server</div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-success btn-sm" onclick="checkWANodeServer()"><i class="fab fa-whatsapp"></i> Check Node Server</button>
         <button class="btn btn-secondary btn-sm" onclick="reconnectWANodeServer()"><i class="fas fa-redo"></i> Reconnect</button>
@@ -1247,12 +1224,8 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
     <!-- GMAIL EMAIL CARD -->
     <div class="card" style="grid-column:1/-1">
       <div class="card-title"><i class="fas fa-envelope" style="color:#3b82f6"></i> Email Auto-Send with PDF — Gmail (100% Free Forever)</div>
-      <div style="background:#eff6ff;border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:13px;color:#1e40af;line-height:1.8">
-        <strong>📧 Gmail se PDF auto-attached email — completely free:</strong><br>
-        <strong>Step 1:</strong> Gmail kholo → <a href="https://myaccount.google.com/security" target="_blank" style="color:#2563eb;font-weight:700">myaccount.google.com/security</a> → 2-Step Verification ON karo<br>
-        <strong>Step 2:</strong> Search "App Passwords" → Select App: <strong>Mail</strong> → Generate → 16-digit password copy karo<br>
-        <strong>Step 3:</strong> Neeche paste karo → Save → Test Email dabao → Done! ✅<br>
-        <span style="color:#64748b;font-size:11px">⚠️ Normal Gmail password nahi — App Password chahiye (16 digits, spaces ke bina)</span>
+      <div style="background:#eff6ff;border-radius:10px;padding:10px 18px;margin-bottom:14px;font-size:13px;color:#1e40af">
+        📧 Enter your Gmail address and App Password (16 digits) below to enable PDF email sending.
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
         <div class="form-group"><label>Gmail Address</label><input type="email" id="setGmailUser" placeholder="yourname@gmail.com"></div>
@@ -2065,7 +2038,6 @@ def send_email(to, subj, body):
       <table class="line-items-table"><thead><tr><th style="width:26%">Service / Item</th><th style="width:9%">SAC</th><th style="width:7%">Qty</th><th style="width:11%">Rate (₹)</th><th style="width:7%">GST%</th><th style="width:10%">Amount</th><th style="width:10%">GST Amt</th><th style="width:10%">Total</th><th style="width:5%">Del</th></tr></thead>
       <tbody id="invItemsBody"></tbody></table>
     </div>
-    <button class="btn btn-secondary btn-sm" onclick="addInvoiceItem()" style="margin-top:8px"><i class="fas fa-plus"></i> Add Item</button>
     <button class="btn btn-ai btn-sm" onclick="addFromCatalog('invoice')" style="margin-top:8px"><i class="fas fa-box"></i> From Catalog</button>
     <div class="invoice-totals">
       <div class="inv-total-line"><span>Subtotal</span><span id="invSub">₹0</span></div>
@@ -3066,7 +3038,9 @@ function saveSettings(){
   settings.gmailUser=document.getElementById('setGmailUser')?.value.trim()||'';
   settings.gmailPass=document.getElementById('setGmailPass')?.value.trim()||'';
   settings.gmailFromName=document.getElementById('setGmailFromName')?.value.trim()||'';
-  settings.gstEnabled=settings.gstEnabled!==false;settings.aiProvider=document.getElementById('setAIProvider')?.value||'local';
+  // Preserve the current gstEnabled value — do NOT overwrite it with a boolean expression
+  if (settings.gstEnabled === undefined) settings.gstEnabled = true; // default on
+  settings.aiProvider=document.getElementById('setAIProvider')?.value||'local';
   // ── SECURITY: AI keys are sent to backend (AES-encrypted in DB), NOT stored in localStorage ──
   const _claudeKey   = document.getElementById('setClaudeKey')?.value.trim()||'';
   const _openaiKey   = document.getElementById('setOpenAIKey')?.value.trim()||'';
@@ -5021,29 +4995,32 @@ async function _sendEmailResend(email,name,subject,message,type,id){
   return _sendEmailWithPDF(email,name,subject,message,type,id);
 }
 async function _sendEmailWithPDF(email,name,subject,message,type,id){
-  if(!email)return;
+  if(!email){toast('Email address required','warning');return;}
+  // Basic email format validation
+  const emailRegex=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if(!emailRegex.test(email)){toast('Invalid email format: '+email,'warning');return;}
   if(!_sdPdfResult)_sdPdfResult=await buildDocPDF(type,id);
   try{
-    const res=await fetch(`${WA_SERVER}/api/send-email`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
+    // Use API client (routes to /api/send/email — SaaS backend with Gmail PDF attachment)
+    if(typeof API!=='undefined'&&API.isLoggedIn()){
+      const result=await API.sendEmail({
         toEmail:email,toName:name||email,subject,message,
-        pdfBase64:_sdPdfResult.base64,pdfName:_sdPdfResult.fname,
-        fromName:settings.gmailFromName||settings.bizName||'LeadFlow'
-      })
-    });
-    const data=await res.json();
-    if(data.success){
-      toast(`✅ Email with PDF sent to ${email}!`,'success',5000);
+        docType:type,docId:id
+      });
+      if(result&&result.success){
+        toast(`✅ Email with PDF sent to ${email}!`,'success',5000);
+        return;
+      }
+      throw new Error((result&&result.error)||'Email send failed');
     }else{
-      throw new Error(data.error||'Email failed');
+      throw new Error('Not logged in');
     }
   }catch(e){
     console.error('Email error:',e);
-    // Fallback to mailto
+    // Fallback to mailto + PDF download
     _autoDownloadPDF();
     window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`,'_blank');
-    toast('Email server error — PDF downloaded, email client opened\n💡 Check Gmail config in Settings','warning',7000);
+    toast('Email via server failed ('+e.message+') — PDF downloaded, email client opened.\n💡 Check Gmail config in Settings → Email','warning',8000);
   }
 }
 
@@ -5051,37 +5028,29 @@ async function saveGmailConfig(){
   const gmailUser=document.getElementById('setGmailUser')?.value.trim();
   const gmailPass=document.getElementById('setGmailPass')?.value.replace(/\s/g,'');
   const fromName=document.getElementById('setGmailFromName')?.value.trim();
-  if(!gmailUser||!gmailPass){toast('Gmail address aur App Password daalo','warning');return;}
-  // Save to LeadFlow settings
-  settings.gmailUser=gmailUser;settings.gmailPass=gmailPass;settings.gmailFromName=fromName;
+  if(!gmailUser||!gmailPass){toast('Gmail address and App Password required','warning');return;}
+  // Save to local settings object and API
+  settings.gmailUser=gmailUser;
+  settings.gmailPass=gmailPass;
+  settings.gmailFromName=fromName||settings.bizName||'LeadFlow';
   LS.set(KEYS.settings,settings);
-  // Send config to Node server
   try{
-    const res=await fetch(`${WA_SERVER}/api/config`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({gmailUser,gmailPass,fromName:fromName||settings.bizName||'LeadFlow'})
-    });
-    const data=await res.json();
-    if(data.success){toast('✅ Gmail config saved! Click Test Email to verify.','success',5000);}
-    else{toast('Server error: '+data.error,'error');}
+    await API.saveSettings({...settings,gmailUser,gmailPass,gmailFromName:fromName});
+    toast('✅ Gmail config saved! Click Test Email to verify.','success',5000);
   }catch(e){
-    toast('Node server not running! Start install_and_start.bat first','error',5000);
+    toast('Save error: '+e.message,'error');
   }
 }
 
 async function testGmailEmail(){
   const gmailUser=document.getElementById('setGmailUser')?.value.trim()||settings.gmailUser;
-  if(!gmailUser){toast('Gmail address daalo pehle','warning');return;}
+  if(!gmailUser){toast('Add Gmail address first in Settings → Email','warning');return;}
   toast('📧 Sending test email…','info',3000);
   try{
-    const res=await fetch(`${WA_SERVER}/api/test-email`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({toEmail:gmailUser})
-    });
-    const data=await res.json();
-    if(data.success){toast('✅ Test email sent! Check your inbox.','success',5000);}
-    else{toast('Error: '+data.error,'error',7000);}
-  }catch(e){toast('Node server not running! Start install_and_start.bat first','error',5000);}
+    const result=await API.testEmail();
+    if(result&&result.success){toast('✅ Test email sent! Check inbox: '+gmailUser,'success',6000);}
+    else{toast('Test failed: '+(result&&result.error||'Unknown error')+'\n💡 Check Gmail credentials and ensure 2-Step Verification is ON','error',8000);}
+  }catch(e){toast('Test email failed: '+e.message,'error',8000);}
 }
 
 async function testResendEmail(){return testGmailEmail();}

@@ -107,7 +107,7 @@ router.post('/register',
         authMethods: ['password']
       });
 
-      // Create settings + 14-day trial
+      // Create settings + 7-day trial
       await Settings.create({ userId: user._id, bizName: name, userName: name, phone: cleanMobile });
       await _createTrial(user._id);
 
@@ -133,7 +133,7 @@ router.post('/register',
       res.status(201).json({
         accessToken,
         user: { id: user._id, email: user.email, name: user.name, role: user.role, mobile: user.mobile },
-        subscription: { plan: 'trial', daysRemaining: 14 }
+        subscription: { plan: 'trial', daysRemaining: 7 }
       });
     } catch (err) { next(err); }
   }

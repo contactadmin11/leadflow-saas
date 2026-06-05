@@ -8,6 +8,7 @@ const rateLimit  = require('express-rate-limit');
 const License    = require('../models/License');
 const User       = require('../models/User');
 const AuditLog   = require('../models/AuditLog');
+const Subscription = require('../models/Subscription');
 const { adminProtect } = require('../middleware/auth');
 const { audit }  = require('../services/audit.service');
 const { v4: uuidv4 } = require('uuid');
@@ -326,5 +327,71 @@ router.get('/users-devices', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+
+// ── Subscription Management (Admin) ─────────────────────────────────────────
+
+// GET all subscriptions with user info
+router.get('/subscriptions', async (req, res, next) => {
+  try {
+    const subs = await Subscription.find().sort('-createdAt').lean();
+    const users = await User.find({ _id: { $in: subs.map(s => s.userId) } }, 'email name mobile').lean();
+    const userMap = {};
+    users.forEach(u => { userMap[u._id.toString()] = u; });
+    const result = subs.map(s => ({
+      ...s,
+      user: userMap[s.userId?.toString()] || null,
+      daysLeft: s.plan === 'trial'
+        ? Math.max(0, Math.ceil((new Date(s.trialEndsAt) - new Date()) / 86400000))
+        : Math.max(0, Math.ceil((new Date(s.currentPeriodEnd) - new Date()) / 86400000))
+    }));
+    res.json({ subscriptions: result });
+  } catch (err) { next(err); }
+});
+
+// POST extend trial by N days for a user
+router.post('/subscriptions/:userId/extend-trial', async (req, res, next) => {
+  try {
+    const { days = 7 } = req.body;
+    const sub = await Subscription.findOne({ userId: req.params.userId });
+    if (!sub) return res.status(404).json({ error: 'Subscription not found' });
+    if (sub.plan !== 'trial') return res.status(400).json({ error: 'User is not on trial plan' });
+    const currentEnd = new Date(sub.trialEndsAt) > new Date() ? new Date(sub.trialEndsAt) : new Date();
+    currentEnd.setDate(currentEnd.getDate() + parseInt(days));
+    sub.trialEndsAt = currentEnd;
+    sub.status = 'active';
+    await sub.save();
+    await audit({ action: 'ADMIN_TRIAL_EXTENDED', resource: 'Subscription', resourceId: sub._id, details: { userId: req.params.userId, days }, req });
+    res.json({ success: true, newTrialEnd: sub.trialEndsAt });
+  } catch (err) { next(err); }
+});
+
+// POST force-expire trial for a user
+router.post('/subscriptions/:userId/force-expire', async (req, res, next) => {
+  try {
+    const sub = await Subscription.findOneAndUpdate(
+      { userId: req.params.userId },
+      { $set: { status: 'expired', trialEndsAt: new Date() } },
+      { new: true }
+    );
+    if (!sub) return res.status(404).json({ error: 'Subscription not found' });
+    await audit({ action: 'ADMIN_TRIAL_FORCE_EXPIRED', resource: 'Subscription', resourceId: sub._id, details: { userId: req.params.userId }, req });
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+// POST grant lifetime subscription to a user
+router.post('/subscriptions/:userId/grant-lifetime', async (req, res, next) => {
+  try {
+    const sub = await Subscription.findOneAndUpdate(
+      { userId: req.params.userId },
+      { $set: { plan: 'lifetime', status: 'active', notes: 'Admin granted lifetime' } },
+      { new: true, upsert: true }
+    );
+    await audit({ action: 'ADMIN_LIFETIME_GRANTED', resource: 'Subscription', resourceId: sub._id, details: { userId: req.params.userId }, req });
+    res.json({ success: true, subscription: sub });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
+
 

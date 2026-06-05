@@ -97,6 +97,8 @@ const generateInvoicePDF = (invoice, settings) => {
         const bg = idx % 2 === 0 ? '#ffffff' : LIGHT;
         doc.rect(40, rowY, 515, 20).fill(bg);
         cx = 40;
+        // Support both gstAmt (frontend) and gstAmount (some legacy data)
+        const itemGstAmt = item.gstAmount !== undefined ? item.gstAmount : (item.gstAmt || 0);
         const cells = [
           String(idx + 1),
           item.name || '',
@@ -104,8 +106,8 @@ const generateInvoicePDF = (invoice, settings) => {
           String(item.qty),
           `${item.gstRate}%`,
           `${currency}${fmtNum(item.rate)}`,
-          `${currency}${fmtNum(item.gstAmount)}`,
-          `${currency}${fmtNum(item.total)}`
+          `${currency}${fmtNum(itemGstAmt)}`,
+          `${currency}${fmtNum(item.total || (item.amount + itemGstAmt))}`
         ];
         cells.forEach((cell, i) => {
           doc.fillColor('#0f172a').fontSize(8).font('Helvetica')

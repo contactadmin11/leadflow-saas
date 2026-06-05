@@ -2,7 +2,7 @@
  * Subscription + Payment Routes (Razorpay)
  * ══════════════════════════════════════════
  * Plans:
- *   trial    → 14 days free (auto-created on register)
+ *   trial    → 7 days free (auto-created on register)
  *   monthly  → ₹499 / month
  *   quarterly→ ₹1299 / quarter
  *   yearly   → ₹3999 / year
@@ -20,6 +20,7 @@ const User         = require('../models/User');
 const { protect }  = require('../middleware/auth');
 const { audit }    = require('../services/audit.service');
 const logger       = require('../config/logger');
+const { registerSubscription } = require('../middleware/cacheProtection');
 const router       = express.Router();
 
 // ── Plan config ────────────────────────────────────────────────────────────
@@ -28,7 +29,7 @@ const PLANS = {
   quarterly: { amount: 74900, months: 3,  label: '₹749 / Quarter' },
   yearly:    { amount: 290000, months: 12, label: '₹2,900 / Year'    }
 };
-const TRIAL_DAYS = parseInt(process.env.TRIAL_DAYS) || 14;
+const TRIAL_DAYS = parseInt(process.env.TRIAL_DAYS) || 7;
 const CURRENCY   = 'INR';
 
 // ── Lazy-load Razorpay (only if credentials are set) ──────────────────────
@@ -268,11 +269,14 @@ async function _createTrial(userId) {
   const now   = new Date();
   const end   = new Date(now);
   end.setDate(end.getDate() + TRIAL_DAYS);
-  return Subscription.findOneAndUpdate(
+  const sub = await Subscription.findOneAndUpdate(
     { userId },
     { $setOnInsert: { userId, plan: 'trial', status: 'active', trialStartAt: now, trialEndsAt: end } },
     { new: true, upsert: true }
   );
+  // Phase 1: Register in Bloom Filter so cache penetration protection allows this user
+  registerSubscription(userId);
+  return sub;
 }
 
 // ── GET my active devices ─────────────────────────────────────────────────

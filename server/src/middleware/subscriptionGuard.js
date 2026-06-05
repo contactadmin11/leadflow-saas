@@ -5,8 +5,10 @@
  */
 const Subscription = require('../models/Subscription');
 const logger       = require('../config/logger');
+const { getSubscriptionProtected } = require('./cacheProtection');
 
-const GRACE_DAYS = 3; // days after expiry before hard block
+const GRACE_DAYS       = 3; // days after expiry before hard block (paid plans)
+const TRIAL_GRACE_DAYS = 0; // no grace for trial — expire exactly on time
 
 const subscriptionGuard = async (req, res, next) => {
   // Skip subscription check for these routes
@@ -19,7 +21,8 @@ const subscriptionGuard = async (req, res, next) => {
   if (openPaths.some(p => req.originalUrl.startsWith(p))) return next();
 
   try {
-    const sub = await Subscription.findOne({ userId: req.user?.id });
+    // Phase 1: Use Bloom Filter + Single-Flight + Hot Key protected lookup
+    const sub = await getSubscriptionProtected(req.user?.id);
 
     if (!sub) {
       return res.status(402).json({
@@ -43,7 +46,7 @@ const subscriptionGuard = async (req, res, next) => {
 
     if (!isLifetime && endDate) {
       const graceEnd = new Date(endDate);
-      graceEnd.setDate(graceEnd.getDate() + GRACE_DAYS);
+      graceEnd.setDate(graceEnd.getDate() + (isTrialPlan ? TRIAL_GRACE_DAYS : GRACE_DAYS));
 
       if (now > graceEnd) {
         // Hard block after grace period
@@ -54,7 +57,7 @@ const subscriptionGuard = async (req, res, next) => {
         return res.status(402).json({
           error: 'subscription_expired',
           message: isTrialPlan
-            ? 'Your 14-day free trial has ended. Subscribe to continue.'
+            ? 'Your 7-day free trial has ended. Subscribe to continue.'
             : 'Your subscription has expired. Renew to continue.',
           plan:          sub.plan,
           expiredAt:     endDate,

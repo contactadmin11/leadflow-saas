@@ -521,7 +521,7 @@ async function _checkSubscription() {
     }
 
     // Show trial banner if within trial and expiring soon
-    if (sub.plan === 'trial' && sub.daysRemaining <= 14) {
+    if (sub.plan === 'trial' && sub.daysRemaining <= 7) {
       _showTrialBanner(sub.daysRemaining);
     }
 
@@ -571,7 +571,7 @@ function _showPaywall(sub) {
       </h2>
       <p style="color:#7a92b0;font-size:15px;line-height:1.7;margin-bottom:32px">
         ${isTrialExpired
-          ? 'Your 14-day free trial is over. Subscribe to continue using LeadFlow OS and keep all your data safe.'
+          ? 'Your 7-day free trial is over. Subscribe to continue using LeadFlow OS and keep all your data safe.'
           : 'Renew your subscription to regain full access to your leads, invoices, and data.'}
       </p>
       <div style="display:grid;gap:10px;margin-bottom:20px">
