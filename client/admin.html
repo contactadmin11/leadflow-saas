@@ -261,9 +261,11 @@ async function api(path, opt = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401) {
-    toast('Session expired — please login again', true);
-    setTimeout(logout, 1500);
-    throw new Error('Unauthorized');
+    if (path !== '/api/admin/login') {
+      toast('Session expired — please login again', true);
+      setTimeout(logout, 1500);
+    }
+    throw new Error(data.error || 'Unauthorized');
   }
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
@@ -360,12 +362,12 @@ function row(k, i) {
     <td>${fmtDate(k.lastVerifiedAt)}</td>
     <td><div class="row-actions">
       ${k.status !== 'revoked'
-        ? `<button class="orange btn-sm" data-id="${k.id}" onclick="openExtend(this.dataset.id)">Extend</button>
-           <button class="danger btn-sm" data-id="${k.id}" onclick="act(this.dataset.id,'revoke')">Revoke</button>`
-        : `<button class="green btn-sm" data-id="${k.id}" onclick="act(this.dataset.id,'reactivate')">Reactivate</button>`}
-      <button class="blue btn-sm" data-id="${k.id}" onclick="act(this.dataset.id,'reset-devices')" title="Reset active devices">↺ Devices (${k.activeDevices||0}/${k.maxUsers||1})</button>
-      <button class="orange btn-sm" onclick="changeLicenseMax('${k.id}', ${k.maxUsers||1})" title="Change Max Devices">Set Max Devices</button>
-      <button class="muted-btn btn-sm" data-id="${k.id}" onclick="act(this.dataset.id,'delete')">Delete</button>
+        ? `<button class="orange btn-sm" data-id="${k._id}" onclick="openExtend(this.dataset.id)">Extend</button>
+           <button class="danger btn-sm" data-id="${k._id}" onclick="act(this.dataset.id,'revoke')">Revoke</button>`
+        : `<button class="green btn-sm" data-id="${k._id}" onclick="act(this.dataset.id,'reactivate')">Reactivate</button>`}
+      <button class="blue btn-sm" data-id="${k._id}" onclick="act(this.dataset.id,'reset-devices')" title="Reset active devices">↺ Devices (${k.activeDevices||0}/${k.maxUsers||1})</button>
+      <button class="orange btn-sm" onclick="changeLicenseMax('${k._id}', ${k.maxUsers||1})" title="Change Max Devices">Set Max Devices</button>
+      <button class="muted-btn btn-sm" data-id="${k._id}" onclick="act(this.dataset.id,'delete')">Delete</button>
     </div></td>
   </tr>`;
 }
@@ -389,7 +391,7 @@ async function act(id, action) {
 
 function openExtend(id) {
   selectedId = id;
-  const k = keys.find(x => x.id === id);
+  const k = keys.find(x => x._id === id);
   document.getElementById('extendLabel').textContent = k ? k.key : '';
   document.getElementById('modal').classList.add('show');
 }
@@ -481,6 +483,22 @@ function renderUsers() {
         const sub = u.subscription;
         const maxDev = sub ? sub.maxDevices : 1;
         const subText = sub ? `${planLabels[sub.plan]||sub.plan} (${sub.status.toUpperCase()})` : 'None';
+        
+        let subActions = '';
+        if (sub) {
+          if (sub.plan === 'trial') {
+            subActions = `
+              <button class="orange btn-sm" onclick="extendUserTrial('${u._id}')">Extend Trial</button>
+              <button class="danger btn-sm" onclick="expireUserTrial('${u._id}')">End Trial</button>
+            `;
+          }
+          if (sub.plan !== 'lifetime') {
+            subActions += `
+              <button class="blue btn-sm" onclick="grantUserLifetime('${u._id}')">Grant Lifetime</button>
+            `;
+          }
+        }
+        
         return `<tr>
           <td>${i+1}</td>
           <td><b>${esc(u.name)}</b></td>
@@ -493,12 +511,78 @@ function renderUsers() {
           <td>${subText}</td>
           <td>
             <div class="row-actions">
-              <button class="blue btn-sm" onclick="changeDeviceCount('${u._id}', ${maxDev})">Max Devices: ${maxDev}</button>
+              ${u.isActive 
+                ? `<button class="orange btn-sm" onclick="toggleUserActive('${u._id}', false)">Deactivate</button>` 
+                : `<button class="green btn-sm" onclick="toggleUserActive('${u._id}', true)">Activate</button>`}
+              <button class="blue btn-sm" onclick="changeDeviceCount('${u._id}', ${maxDev})">Max Dev: ${maxDev}</button>
+              <button class="blue btn-sm" onclick="resetUserDevices('${u._id}')" title="Reset all device logins">↺ Devs (${u.deviceCount||0})</button>
+              ${subActions}
+              <button class="danger btn-sm" onclick="deleteUser('${u._id}')">Delete</button>
             </div>
           </td>
         </tr>`;
       }).join('')
-    : '<tr><td colspan="9" style="text-align:center;padding:28px;color:#94a3b8">No users found</td></tr>';
+    : '<tr><td colspan="10" style="text-align:center;padding:28px;color:#94a3b8">No users found</td></tr>';
+}
+
+async function toggleUserActive(userId, active) {
+  if (!confirm(`${active ? 'Activate' : 'Deactivate'} this user?`)) return;
+  try {
+    await api(`/api/admin/users/${userId}/${active ? 'activate' : 'deactivate'}`, { method: 'PUT' });
+    toast('User status updated ✅');
+    loadUsers();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function resetUserDevices(userId) {
+  if (!confirm('Reset all active logins for this user? They will be prompted to log in again.')) return;
+  try {
+    await api(`/api/admin/users/${userId}/devices`, { method: 'DELETE' });
+    toast('All devices reset ✅');
+    loadUsers();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function deleteUser(userId) {
+  if (!confirm('⚠️ Permanently delete this user? This will soft delete their account and log them out.')) return;
+  try {
+    await api(`/api/admin/users/${userId}`, { method: 'DELETE' });
+    toast('User deleted ✅');
+    loadUsers();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function extendUserTrial(userId) {
+  const days = prompt('Enter number of days to extend the trial by:', '7');
+  if (days === null || days === '') return;
+  const num = parseInt(days);
+  if (isNaN(num) || num < 1) return alert('Invalid number of days');
+  try {
+    await api(`/api/admin/subscriptions/${userId}/extend-trial`, {
+      method: 'POST',
+      body: JSON.stringify({ days: num })
+    });
+    toast('Trial extended ✅');
+    loadUsers();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function expireUserTrial(userId) {
+  if (!confirm('Force expire this user\'s trial subscription?')) return;
+  try {
+    await api(`/api/admin/subscriptions/${userId}/force-expire`, { method: 'POST' });
+    toast('Trial expired ✅');
+    loadUsers();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function grantUserLifetime(userId) {
+  if (!confirm('Grant a lifetime free subscription to this user?')) return;
+  try {
+    await api(`/api/admin/subscriptions/${userId}/grant-lifetime`, { method: 'POST' });
+    toast('Lifetime subscription granted ✅');
+    loadUsers();
+  } catch (e) { toast(e.message, true); }
 }
 
 async function changeDeviceCount(userId, currentMax) {

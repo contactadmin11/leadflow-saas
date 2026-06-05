@@ -154,6 +154,24 @@ router.get('/users', async (req, res, next) => {
 router.put('/users/:id/deactivate', async (req, res, next) => {
   try {
     await User.findByIdAndUpdate(req.params.id, { $set: { isActive: false } });
+    const Session = require('../models/Session');
+    await Session.updateMany({ userId: req.params.id }, { $set: { revokedAt: new Date() } });
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+router.put('/users/:id/activate', async (req, res, next) => {
+  try {
+    await User.findByIdAndUpdate(req.params.id, { $set: { isActive: true } });
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/users/:id', async (req, res, next) => {
+  try {
+    await User.findByIdAndUpdate(req.params.id, { $set: { deletedAt: new Date(), isActive: false } });
+    const Session = require('../models/Session');
+    await Session.updateMany({ userId: req.params.id }, { $set: { revokedAt: new Date() } });
     res.json({ success: true });
   } catch (err) { next(err); }
 });

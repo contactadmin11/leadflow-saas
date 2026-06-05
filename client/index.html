@@ -1220,13 +1220,11 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
         <button class="btn btn-secondary btn-sm" onclick="reconnectWANodeServer()"><i class="fas fa-redo"></i> Reconnect</button>
         <div id="waNodeStatus" style="padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;background:#f1f5f9;color:#64748b">⚪ Not checked</div>
       </div>
+      <div id="waQRCode" style="margin-top:14px;display:flex;justify-content:center"></div>
     </div>
     <!-- GMAIL EMAIL CARD -->
     <div class="card" style="grid-column:1/-1">
-      <div class="card-title"><i class="fas fa-envelope" style="color:#3b82f6"></i> Email Auto-Send with PDF — Gmail (100% Free Forever)</div>
-      <div style="background:#eff6ff;border-radius:10px;padding:10px 18px;margin-bottom:14px;font-size:13px;color:#1e40af">
-        📧 Enter your Gmail address and App Password (16 digits) below to enable PDF email sending.
-      </div>
+      <div class="card-title"><i class="fas fa-envelope" style="color:#3b82f6"></i> Email Auto-Send with PDF — Gmail</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
         <div class="form-group"><label>Gmail Address</label><input type="email" id="setGmailUser" placeholder="yourname@gmail.com"></div>
         <div class="form-group"><label>Gmail App Password <span style="color:#94a3b8;font-size:11px">(16 digits)</span></label><input type="password" id="setGmailPass" placeholder="xxxx xxxx xxxx xxxx"></div>
@@ -1241,9 +1239,6 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
     <!-- AI PROVIDER SETTINGS CARD -->
     <div class="card" style="grid-column:1/-1">
       <div class="card-title"><i class="fas fa-brain" style="color:var(--ai)"></i> AI Assistant Settings — Choose Your Provider</div>
-      <div style="background:#ede9fe;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#5b21b6">
-        ✅ Built-in Smart AI works <strong>100% offline</strong> with no API key. Add a key below to unlock <strong>live AI</strong> with your real data.
-      </div>
       <div class="form-group" style="margin-bottom:14px">
         <label>Select AI Provider</label>
         <select id="setAIProvider" onchange="onAIProviderChange()" style="max-width:300px">
@@ -1260,7 +1255,6 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
           <div class="form-group">
             <label><i class="fas fa-key"></i> Anthropic API Key</label>
             <input type="password" id="setClaudeKey" placeholder="sk-ant-api03-...">
-            <div class="input-hint">Get free key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> — Best for business workflows, sales strategy, and CRM automation</div>
           </div>
         </div>
         <!-- OpenAI -->
@@ -1268,7 +1262,6 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
           <div class="form-group">
             <label><i class="fas fa-key"></i> OpenAI API Key</label>
             <input type="password" id="setOpenAIKey" placeholder="sk-proj-...">
-            <div class="input-hint">Get key at <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a> — Uses GPT-4o model</div>
           </div>
         </div>
         <!-- Gemini -->
@@ -1276,7 +1269,6 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
           <div class="form-group">
             <label><i class="fas fa-key"></i> Google Gemini API Key</label>
             <input type="password" id="setGeminiKey" placeholder="AIzaSy...">
-            <div class="input-hint">Get free key at <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a> — Uses Gemini 1.5 Pro</div>
           </div>
         </div>
         <!-- Perplexity -->
@@ -1284,16 +1276,9 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
           <div class="form-group">
             <label><i class="fas fa-key"></i> Perplexity API Key</label>
             <input type="password" id="setPerplexityKey" placeholder="pplx-...">
-            <div class="input-hint">Get key at <a href="https://www.perplexity.ai/settings/api" target="_blank">perplexity.ai/settings/api</a> — Uses web search for real-time answers</div>
           </div>
         </div>
-        <!-- Local selected info -->
-        <div id="aiField-local" style="background:#f0fdf4;border-radius:8px;padding:12px;font-size:13px;color:#166534">
-          ✅ <strong>Built-in Smart AI</strong> is active — No API key needed! Analyzes your real CRM data for pipeline summaries, follow-up priorities, sales coaching, email drafts, and more. Works completely offline.
-        </div>
-      </div>
-      <div style="margin-top:14px;padding:12px;background:#f8fafc;border-radius:8px;font-size:12px;color:var(--text2)">
-        <strong>Note:</strong> API keys are stored only in your browser localStorage. They are never sent to any server other than the AI provider you select.
+        <div id="aiField-local" style="display:none"></div>
       </div>
     </div>
     </div>
@@ -1310,9 +1295,6 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
     <div class="card" style="grid-column:1/-1;border:2px solid var(--accent)">
       <div class="card-title"><i class="fas fa-database"></i> Data Management — Backup & Restore (JSON)</div>
 
-      <div style="background:#ede9fe;border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#5b21b6">
-        <i class="fas fa-info-circle"></i> <strong>All data lives in your browser.</strong> Export backup regularly. Use Import to restore or move data to another device/browser.
-      </div>
 
       <!-- 3 action cards -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:20px">
@@ -1320,7 +1302,6 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
         <div style="background:linear-gradient(135deg,#1e3a5f,#1e40af);border-radius:12px;padding:20px;color:#fff">
           <div style="font-size:28px;margin-bottom:8px">📦</div>
           <div style="font-weight:800;font-size:15px;margin-bottom:6px">Export Full Backup</div>
-          <div style="font-size:12px;opacity:.85;margin-bottom:14px;line-height:1.6">Downloads ALL data — leads, clients, invoices, quotes, payments, products, templates, settings — as one JSON file.</div>
           <button onclick="exportAllData()" style="background:#fff;color:#1e3a5f;font-weight:800;width:100%;padding:10px;border:none;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px">
             <i class="fas fa-download"></i> Download JSON Backup
           </button>
@@ -1329,7 +1310,6 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
         <div style="background:linear-gradient(135deg,#064e3b,#065f46);border-radius:12px;padding:20px;color:#fff">
           <div style="font-size:28px;margin-bottom:8px">🔄</div>
           <div style="font-weight:800;font-size:15px;margin-bottom:6px">Import / Restore Backup</div>
-          <div style="font-size:12px;opacity:.85;margin-bottom:14px;line-height:1.6">Upload a JSON backup file. <strong>Merge</strong> = keep existing + add new. <strong>Replace</strong> = overwrite everything.</div>
           <label style="background:#fff;color:#064e3b;font-weight:800;width:100%;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box">
             <i class="fas fa-upload"></i> Choose JSON File
             <input type="file" id="restoreFileInput" accept=".json" onchange="previewRestore(this)" style="display:none">
@@ -1635,70 +1615,11 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
       </div>
       <div class="card">
         <div class="card-title"><i class="fab fa-whatsapp" style="color:#25D366"></i> WhatsApp Setup</div>
-        <div style="background:#f0fdf4;border-radius:8px;padding:12px;font-size:13px;color:#065f46;border:1px solid #bbf7d0;margin-bottom:12px;line-height:1.7">
-          1. Open <strong>web.whatsapp.com</strong> and log in<br>
-          2. Keep it open in browser<br>
-          3. LeadFlow opens each chat pre-filled<br>
-          4. You click <strong>Send</strong> per contact<br><br>
-          ⚠️ Max 50 messages/day recommended<br>
-          ⚠️ Keep delay ≥ 3 sec
-        </div>
         <button class="btn btn-success btn-sm" onclick="window.open('https://web.whatsapp.com','_blank')"><i class="fab fa-whatsapp"></i> Open WhatsApp Web</button>
       </div>
-      <!-- Python Script Fix Info -->
-      <div class="card" style="grid-column:1/-1;background:linear-gradient(135deg,#1e293b,#0f172a);color:#e2e8f0;border:none">
-        <div class="card-title" style="color:#60a5fa"><i class="fas fa-python" style="color:#facc15"></i> Why Python Auto-Send Doesn't Work — & How to Fix It</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:12px;line-height:1.7">
-          <div>
-            <div style="color:#f87171;font-weight:700;margin-bottom:6px">❌ Common Reasons pywhatkit Fails</div>
-            <div style="color:#cbd5e1">
-              1. <strong style="color:#fbbf24">WhatsApp Web not logged in</strong> — open Chrome → web.whatsapp.com → scan QR first<br>
-              2. <strong style="color:#fbbf24">Timing too fast</strong> — pywhatkit needs 15–20s to load WhatsApp Web<br>
-              3. <strong style="color:#fbbf24">Wrong time format</strong> — use 24hr time, must be 2+ min in future<br>
-              4. <strong style="color:#fbbf24">Chrome path wrong</strong> — specify <code style="color:#34d399">browser_path</code> if not default<br>
-              5. <strong style="color:#fbbf24">Gmail SMTP blocked</strong> — Gmail requires App Password (not your login password) when 2FA is on
-            </div>
-          </div>
-          <div>
-            <div style="color:#34d399;font-weight:700;margin-bottom:6px">✅ Fixed Python Code</div>
-            <pre style="background:#0f172a;padding:10px;border-radius:8px;font-size:11px;color:#a3e635;overflow-x:auto;margin:0;line-height:1.6">import pywhatkit as pwk
-import time, smtplib
-from email.mime.text import MIMEText
 
-# WhatsApp — always use wait_time>=20
-def send_wa(phone, msg):
-    pwk.sendwhatmsg_instantly(
-        phone_no=phone,   # "+919876543210"
-        message=msg,
-        wait_time=20,     # ← minimum 20 seconds
-        tab_close=True,
-        close_time=5
-    )
-    time.sleep(3)
-
-# Gmail — use App Password
-def send_email(to, subj, body):
-    msg = MIMEText(body)
-    msg['Subject'] = subj
-    msg['From'] = 'you@gmail.com'
-    msg['To'] = to
-    with smtplib.SMTP_SSL('smtp.gmail.com',465) as s:
-        # App Password: myaccount.google.com → Security → App Passwords
-        s.login('you@gmail.com', 'xxxx xxxx xxxx xxxx')
-        s.send_message(msg)</pre>
-          </div>
-        </div>
-        <div style="margin-top:12px;padding:10px;background:#1e3a5f;border-radius:8px;font-size:12px;color:#93c5fd">
-          <strong>💡 Recommendation:</strong> Use <strong>this HTML tool</strong> for WhatsApp (wa.me links — reliable, no bot detection) and the Python script only for Gmail bulk email with smtplib. 
-          For fully automatic WhatsApp sending without clicking, use <strong>WhatsApp Business API</strong> (requires Meta Business verification).
-        </div>
-      </div>
       <div class="card" style="grid-column:1/-1">
         <div class="card-title"><i class="fas fa-envelope" style="color:var(--accent)"></i> Email Setup</div>
-        <div style="background:#eff6ff;border-radius:8px;padding:12px;font-size:13px;color:#1e40af;border:1px solid #93c5fd;margin-bottom:12px;line-height:1.7">
-          LeadFlow uses <strong>mailto:</strong> to open your email client with the message pre-filled. Works with Gmail, Outlook, Thunderbird, etc.<br>
-          For Gmail Web: Set Chrome's mailto handler → <code style="background:rgba(0,0,0,.08);padding:1px 6px;border-radius:4px">chrome://settings/handlers</code>
-        </div>
         <div class="msg-set-row"><label>From Email</label><input type="email" id="mGmail" placeholder="you@gmail.com"></div>
         <div class="msg-set-row"><label>Sender Name</label><input type="text" id="mGmailName" placeholder="Your display name"></div>
         <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="msgTestEmail()"><i class="fas fa-vial"></i> Send Test Email (opens mailto:)</button>
@@ -1951,7 +1872,7 @@ def send_email(to, subj, body):
       <div class="form-group"><label>PAN</label><input type="text" id="clientPAN" placeholder="ABCDE1234F"></div>
       <div class="form-group"><label>State</label><select id="clientState"><option value="">-- Select --</option></select></div>
       <div class="form-group"><label>Industry</label>
-        <select id="clientIndustry"><option value="">-- Select --</option><option>IT / Software</option><option>Manufacturing</option><option>Trading</option><option>Healthcare</option><option>Education</option><option>Real Estate</option><option>Consulting</option><option>Finance / Accounting</option><option>Other</option></select></div>
+        <select id="clientIndustry" onchange="onClientIndChange(this)"><option value="">-- Select --</option><option>IT / Software</option><option>Manufacturing</option><option>Trading</option><option>Healthcare</option><option>Education</option><option>Real Estate</option><option>Consulting</option><option>Finance / Accounting</option><option>Other</option><option value="__custom__">➕ Custom Industry...</option></select><div id="customIndustryWrap" style="display:none;margin-top:6px"><input type="text" id="customIndustryInput" placeholder="Type custom industry..." style="width:100%;padding:8px 12px;border:1.5px solid var(--accent);border-radius:8px;font-size:13px"></div></div>
       <div class="form-group"><label>Linked Lead</label><select id="clientLeadId"><option value="">— None —</option></select></div>
       <div class="form-group"><label>CIN / LLPIN</label><input type="text" id="clientCIN" placeholder="Optional"></div>
     </div>
@@ -2114,7 +2035,7 @@ def send_email(to, subj, body):
       <div class="form-group"><label>Channel</label>
         <select id="tplType"><option value="email">📧 Email</option><option value="whatsapp">💬 WhatsApp</option><option value="sms">📱 SMS</option><option value="invoice">🧾 Invoice Message</option></select></div>
       <div class="form-group"><label>Category</label>
-        <select id="tplCategory"><option value="follow_up">Follow-Up</option><option value="proposal">Proposal</option><option value="invoice">Invoice</option><option value="payment_reminder">Payment Reminder</option><option value="welcome">Welcome / Onboarding</option><option value="renewal">Renewal</option></select></div>
+        <select id="tplCategory" onchange="onTplCatChange(this)"><option value="follow_up">Follow-Up</option><option value="proposal">Proposal</option><option value="invoice">Invoice</option><option value="payment_reminder">Payment Reminder</option><option value="welcome">Welcome / Onboarding</option><option value="renewal">Renewal</option><option value="__custom__">➕ Custom Category...</option></select><div id="customTplCatWrap" style="display:none;margin-top:6px"><input type="text" id="customTplCatInput" placeholder="Type custom category..." style="width:100%;padding:8px 12px;border:1.5px solid var(--accent);border-radius:8px;font-size:13px"></div></div>
     </div>
     <div class="form-group" style="margin-top:10px"><label>Subject (Email)</label><input type="text" id="tplSubject" placeholder="Subject line..."></div>
     <div class="form-group" style="margin-top:10px"><label>Body <span class="required">*</span></label><textarea id="tplBody" rows="8" placeholder="Dear {{name}},&#10;&#10;..."></textarea></div>
@@ -2245,7 +2166,9 @@ function popFilters(){
   const S=(id,html)=>{const el=document.getElementById(id);if(el)el.innerHTML=html;};
   S('filterSource','<option value="">All Sources</option>'+(settings.sources||[]).map(s=>`<option value="${s}">${s}</option>`).join(''));
   S('filterAssigned','<option value="">All Owners</option>'+(settings.team||[]).map(t=>`<option value="${t}">${t}</option>`).join(''));
-  S('leadSource',(settings.sources||[]).map(s=>`<option value="${s}">${s}</option>`).join('')+'<option value="__custom__">➕ Add Custom...</option>');
+  const srcOptions=(settings.sources||[]).map(s=>`<option value="${s}">${s}</option>`).join('')+'<option value="__custom__">➕ Add Custom...</option>';
+  S('leadSource',srcOptions);
+  S('wfDefaultSource',srcOptions.replace('<option value="__custom__">➕ Add Custom...</option>',''));
   S('leadAssigned','<option value="">Unassigned</option>'+(settings.team||[]).map(t=>`<option value="${t}">${t}</option>`).join(''));
   S('actLeadId','<option value="">— Select Lead —</option>'+leads.map(l=>`<option value="${l.id}">${l.name}${l.company?' ('+l.company+')':''}</option>`).join(''));
   S('contactLeadId','<option value="">— None —</option>'+leads.map(l=>`<option value="${l.id}">${l.name}</option>`).join(''));
@@ -2347,6 +2270,8 @@ function saveLead(){
 function deleteLead(id){if(!confirm('Delete this lead?'))return;leads=leads.filter(l=>l.id!==id);LS.set(KEYS.leads,leads);updateBadges();renderLeads();toast('Deleted','info');}
 function filterLeadsTab(f,el){leadsTabFilter=f;document.querySelectorAll('#sec-leads .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderLeads();}
 function renderLeads(){
+  const srcFilter=document.getElementById('filterSource');
+  if(srcFilter){const cur=srcFilter.value;const stdSrc=['Website','Referral','Social Media','Cold Call','Email Campaign','Event','Partner','Other'];const allSrc=[...new Set([...stdSrc, ...leads.map(l=>l.source).filter(Boolean)])].sort();srcFilter.innerHTML='<option value="">All Sources</option>'+allSrc.map(s=>`<option value="${s}" ${s===cur?'selected':''}>${s}</option>`).join('');}
   const q=(document.getElementById('leadSearch')?.value||'').toLowerCase(),src=document.getElementById('filterSource')?.value||'',asgn=document.getElementById('filterAssigned')?.value||'',srt=document.getElementById('sortLeads')?.value||'newest';
   let fl=leads.filter(l=>{if(leadsTabFilter!=='all'&&l.stage!==leadsTabFilter)return false;if(src&&l.source!==src)return false;if(asgn&&l.assignedTo!==asgn)return false;if(q&&!(l.name+l.company+l.email+l.phone+l.source+l.assignedTo+(l.tags||[]).join(' ')).toLowerCase().includes(q))return false;return true;});
   fl.sort((a,b)=>srt==='newest'?new Date(b.createdAt)-new Date(a.createdAt):srt==='oldest'?new Date(a.createdAt)-new Date(b.createdAt):srt==='value-high'?(b.value||0)-(a.value||0):srt==='value-low'?(a.value||0)-(b.value||0):a.name.localeCompare(b.name));
@@ -2411,17 +2336,24 @@ function renderFU(){
   const el=document.getElementById('followupsList');if(!fl.length){el.innerHTML='<div class="empty-state"><div class="es-icon">🔔</div><p>No follow-ups here</p></div>';return;}
   el.innerHTML=fl.map(l=>{const ov=isOD(l.nextFollowUp),td2=isTD(l.nextFollowUp);return`<div class="card" style="margin-bottom:10px;border-left:4px solid ${ov?'var(--danger)':td2?'var(--warning)':'var(--accent)'}"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px"><div style="display:flex;align-items:center;gap:12px"><div style="font-weight:700;font-size:15px">${l.name}</div><div style="font-size:12px;color:var(--text2)">${l.company||''}</div>${sBadge(l.stage)}</div><span style="font-weight:700;font-size:13px;color:${ov?'var(--danger)':td2?'var(--warning)':'var(--text2)'}">${ov?'⚠️ OVERDUE: ':td2?'🔔 TODAY: ':''} ${fD(l.nextFollowUp)}</span></div><div style="display:flex;gap:6px;margin-top:10px"><button class="btn btn-primary btn-sm" onclick="openActivityModal('${l.id}')"><i class="fas fa-phone"></i> Log Call</button><button class="btn btn-secondary btn-sm" onclick="viewLead('${l.id}')"><i class="fas fa-eye"></i> View</button><button class="btn btn-warning btn-sm" onclick="openLeadModal('${l.id}')"><i class="fas fa-edit"></i> Edit</button></div></div>`;}).join('');
 }
-function openClientModal(id){popFilters();popStates();document.getElementById('clientModalTitle').innerHTML='<i class="fas fa-user-check"></i> Add Client';['clientId','clientName','clientCompany','clientEmail','clientPhone','clientGSTIN','clientPAN','clientCIN','clientContractValue','clientBillingStart','clientRenewalDate','clientAddress','clientNotes'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});document.getElementById('clientGSTINHint').textContent='';if(id){const c=clients.find(x=>x.id===id);if(!c)return;document.getElementById('clientModalTitle').innerHTML='<i class="fas fa-edit"></i> Edit Client';const S=(f,v)=>{const el=document.getElementById(f);if(el)el.value=v||'';};S('clientId',c.id);S('clientName',c.name);S('clientCompany',c.company);S('clientEmail',c.email);S('clientPhone',c.phone);S('clientGSTIN',c.gstin);S('clientPAN',c.pan);S('clientState',c.state);S('clientIndustry',c.industry);S('clientLeadId',c.leadId||'');S('clientCIN',c.cin);S('clientEngagement',c.engagement||'One-time');S('clientContractValue',c.contractValue);S('clientBillingStart',c.billingStart);S('clientRenewalDate',c.renewalDate);S('clientOwner',c.owner||'');S('clientAddress',c.address);S('clientNotes',c.notes);}openModal('clientModal');}
+function openClientModal(id){popFilters();popStates();document.getElementById('clientModalTitle').innerHTML='<i class="fas fa-user-check"></i> Add Client';['clientId','clientName','clientCompany','clientEmail','clientPhone','clientGSTIN','clientPAN','clientCIN','clientContractValue','clientBillingStart','clientRenewalDate','clientAddress','clientNotes'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});document.getElementById('clientGSTINHint').textContent='';const _cw=document.getElementById('customIndustryWrap');if(_cw)_cw.style.display='none';document.getElementById('clientIndustry').value='';if(id){const c=clients.find(x=>x.id===id);if(!c)return;document.getElementById('clientModalTitle').innerHTML='<i class="fas fa-edit"></i> Edit Client';const S=(f,v)=>{const el=document.getElementById(f);if(el)el.value=v||'';};S('clientId',c.id);S('clientName',c.name);S('clientCompany',c.company);S('clientEmail',c.email);S('clientPhone',c.phone);S('clientGSTIN',c.gstin);S('clientPAN',c.pan);S('clientState',c.state);
+  const indSel=document.getElementById('clientIndustry');
+  const stdInd=['IT / Software','Manufacturing','Trading','Healthcare','Education','Real Estate','Consulting','Finance / Accounting','Other'];
+  if(c.industry){if(stdInd.includes(c.industry)){indSel.value=c.industry;}else{indSel.value='__custom__';if(_cw)_cw.style.display='block';document.getElementById('customIndustryInput').value=c.industry;}}else{indSel.value='';}
+  S('clientLeadId',c.leadId||'');S('clientCIN',c.cin);S('clientEngagement',c.engagement||'One-time');S('clientContractValue',c.contractValue);S('clientBillingStart',c.billingStart);S('clientRenewalDate',c.renewalDate);S('clientOwner',c.owner||'');S('clientAddress',c.address);S('clientNotes',c.notes);}openModal('clientModal');}
 function saveClient(){
   const name=document.getElementById('clientName').value.trim();if(!name){toast('Name required','error');return;}
   const id=document.getElementById('clientId').value;
-  const data={id:id||uid(),name,company:document.getElementById('clientCompany').value.trim(),email:document.getElementById('clientEmail').value.trim(),phone:document.getElementById('clientPhone').value.trim(),gstin:document.getElementById('clientGSTIN').value.trim(),pan:document.getElementById('clientPAN').value.trim(),state:document.getElementById('clientState').value,industry:document.getElementById('clientIndustry').value,leadId:document.getElementById('clientLeadId').value,cin:document.getElementById('clientCIN').value.trim(),engagement:document.getElementById('clientEngagement').value,contractValue:parseFloat(document.getElementById('clientContractValue').value)||0,billingStart:document.getElementById('clientBillingStart').value,renewalDate:document.getElementById('clientRenewalDate').value,owner:document.getElementById('clientOwner').value,address:document.getElementById('clientAddress').value.trim(),notes:document.getElementById('clientNotes').value.trim(),createdAt:id?(clients.find(c=>c.id===id)?.createdAt||new Date().toISOString()):new Date().toISOString()};
+  const data={id:id||uid(),name,company:document.getElementById('clientCompany').value.trim(),email:document.getElementById('clientEmail').value.trim(),phone:document.getElementById('clientPhone').value.trim(),gstin:document.getElementById('clientGSTIN').value.trim(),pan:document.getElementById('clientPAN').value.trim(),state:document.getElementById('clientState').value,industry:getClientIndustry(),leadId:document.getElementById('clientLeadId').value,cin:document.getElementById('clientCIN').value.trim(),engagement:document.getElementById('clientEngagement').value,contractValue:parseFloat(document.getElementById('clientContractValue').value)||0,billingStart:document.getElementById('clientBillingStart').value,renewalDate:document.getElementById('clientRenewalDate').value,owner:document.getElementById('clientOwner').value,address:document.getElementById('clientAddress').value.trim(),notes:document.getElementById('clientNotes').value.trim(),createdAt:id?(clients.find(c=>c.id===id)?.createdAt||new Date().toISOString()):new Date().toISOString()};
   if(id){const idx=clients.findIndex(c=>c.id===id);clients[idx]=data;}else clients.push(data);
   LS.set(KEYS.clients,clients);closeModal('clientModal');renderClients();updateBadges();toast('Client saved ✅','success');
   if(!id&&!onboardings.find(o=>o.clientId===data.id))autoCreateOB(data.id);
 }
 function deleteClient(id){if(!confirm('Delete?'))return;clients=clients.filter(c=>c.id!==id);LS.set(KEYS.clients,clients);renderClients();updateBadges();}
 function renderClients(){
+  // dynamically populate industry filter
+  const indFilter=document.getElementById('filterClientIndustry');
+  if(indFilter){const cur=indFilter.value;const stdInd=['IT / Software','Manufacturing','Trading','Healthcare','Education','Real Estate','Consulting','Finance / Accounting','Other'];const allInds=[...new Set([...stdInd, ...clients.map(c=>c.industry).filter(Boolean)])].sort();indFilter.innerHTML='<option value="">All Industries</option>'+allInds.map(i=>`<option value="${i}" ${i===cur?'selected':''}>${i}</option>`).join('');}
   const q=(document.getElementById('clientSearch')?.value||'').toLowerCase(),ind=document.getElementById('filterClientIndustry')?.value||'';
   const fl=clients.filter(c=>(!ind||c.industry===ind)&&(!q||(c.name+c.company+c.email+c.gstin+c.industry).toLowerCase().includes(q)));
   const tV=fl.reduce((s,c)=>s+(c.contractValue||0),0);document.getElementById('clientsStatsBar').innerHTML=`<div class="stat-item"><span>Total:</span><span class="stat-val">${fl.length}</span></div><div class="stat-item"><span>Contract Value:</span><span class="stat-val">${fC(tV)}</span></div><div class="stat-item"><span>Renewals This Week:</span><span class="stat-val" style="color:var(--warning)">${fl.filter(c=>c.renewalDate&&isTW(c.renewalDate)).length}</span></div>`;
@@ -2436,16 +2368,48 @@ function saveOnboarding(){const clientId=document.getElementById('obClientId').v
 function toggleOBTask(obId,ti){const ob=onboardings.find(x=>x.id===obId);if(!ob)return;ob.checklist[ti].done=!ob.checklist[ti].done;LS.set(KEYS.onboarding,onboardings);renderOB();}
 function deleteOnboarding(id){if(!confirm('Delete?'))return;onboardings=onboardings.filter(o=>o.id!==id);LS.set(KEYS.onboarding,onboardings);renderOB();}
 function renderOB(){const el=document.getElementById('onboardingList');if(!onboardings.length){el.innerHTML='<div class="empty-state"><div class="es-icon">📋</div><p>No onboarding records. They auto-create when you add a client.</p></div>';return;}el.innerHTML=onboardings.map(ob=>{const c=clients.find(x=>x.id===ob.clientId);const done=ob.checklist.filter(t=>t.done).length,total=ob.checklist.length,pct=total?Math.round(done/total*100):0;return`<div class="onboarding-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div><div style="font-weight:700;font-size:15px">${c?c.company||c.name:'Unknown'}</div><div style="font-size:12px;color:var(--text2)">Start: ${fD(ob.startDate)} · Target: ${fD(ob.targetDate)} · ${ob.owner||'—'}</div></div><div style="display:flex;align-items:center;gap:10px"><div style="text-align:right"><div style="font-family:'Comic Sans MS',cursive;font-size:20px;font-weight:800;color:${pct===100?'var(--success)':'var(--accent)'}">${pct}%</div><div style="font-size:11px;color:var(--text2)">${done}/${total}</div></div><button class="btn btn-secondary btn-sm" onclick="openOnboardingModal('${ob.id}')"><i class="fas fa-edit"></i></button><button class="btn btn-danger btn-sm" onclick="deleteOnboarding('${ob.id}')"><i class="fas fa-trash"></i></button></div></div><div class="ob-progress"><div class="ob-fill" style="width:${pct}%"></div></div>${ob.checklist.map((t,i)=>`<div class="checklist-item ${t.done?'done':''}"><input type="checkbox" ${t.done?'checked':''} onchange="toggleOBTask('${ob.id}',${i})"><label onclick="toggleOBTask('${ob.id}',${i})">${t.task}</label></div>`).join('')}</div>`;}).join('');}
-function openProductModal(id){['productId','productName','productSAC','productDesc','productRate'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});document.getElementById('productModalTitle').innerHTML='<i class="fas fa-box"></i> Add Item';document.getElementById('productCat').value='';document.getElementById('productUnit').value='Nos';document.getElementById('productGST').value='18';const _cw=document.getElementById('customCatWrap');if(_cw)_cw.style.display='none';const _gw=document.getElementById('customGSTWrap');if(_gw)_gw.style.display='none';if(id){const p=products.find(x=>x.id===id);if(!p)return;document.getElementById('productModalTitle').innerHTML='<i class="fas fa-edit"></i> Edit Item';const S=(f,v)=>{const el=document.getElementById(f);if(el)el.value=v||'';};S('productId',p.id);S('productName',p.name);S('productSAC',p.sac);
-    // restore custom category
-    const catSel=document.getElementById('productCat');
-    const stdCats=['Product','Software / SaaS','Service','Consulting','Subscription','Maintenance'];
-    if(stdCats.includes(p.category)){catSel.value=p.category;}else{catSel.value='__custom__';const cw=document.getElementById('customCatWrap');if(cw)cw.style.display='block';document.getElementById('customCatInput').value=p.category;}
+function openProductModal(id){
+  ['productId','productName','productSAC','productDesc','productRate'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});
+  document.getElementById('productModalTitle').innerHTML='<i class="fas fa-box"></i> Add Item';
+  document.getElementById('productUnit').value='Nos';
+  document.getElementById('productGST').value='18';
+  const _cw=document.getElementById('customCatWrap');if(_cw)_cw.style.display='none';
+  const _gw=document.getElementById('customGSTWrap');if(_gw)_gw.style.display='none';
+
+  // dynamically populate custom categories (for both add and edit)
+  const catSel=document.getElementById('productCat');
+  const stdCats=['Product','Software / SaaS','Service','Consulting','Subscription','Maintenance'];
+  const customCats = [...new Set(products.map(p=>p.category).filter(c=>c && !stdCats.includes(c)))].sort();
+  if(catSel){
+    catSel.innerHTML='<option value="">-- Category --</option>'+stdCats.map(c=>`<option value="${c}">${c}</option>`).join('')+customCats.map(c=>`<option value="${c}">${c}</option>`).join('')+'<option value="__custom__">➕ Custom Category...</option>';
+    catSel.value='';
+  }
+
+  if(id){
+    const p=products.find(x=>x.id===id);if(!p)return;
+    document.getElementById('productModalTitle').innerHTML='<i class="fas fa-edit"></i> Edit Item';
+    const S=(f,v)=>{const el=document.getElementById(f);if(el)el.value=v||'';};
+    S('productId',p.id);S('productName',p.name);S('productSAC',p.sac);
+    
+    if(p.category){
+      if(stdCats.includes(p.category) || customCats.includes(p.category)){
+        if(catSel)catSel.value=p.category;
+      }else{
+        if(catSel)catSel.value='__custom__';
+        const cw=document.getElementById('customCatWrap');
+        if(cw)cw.style.display='block';
+        const cci=document.getElementById('customCatInput');
+        if(cci)cci.value=p.category;
+      }
+    }
     S('productUnit',p.unit||'Nos');S('productRate',p.rate);
     // restore custom GST
     const gstSel=document.getElementById('productGST');const stdRates=[0,5,12,18,28];const gr=p.gstRate||18;
-    if(stdRates.includes(gr)){gstSel.value=gr;}else{gstSel.value='__custom__';const gw=document.getElementById('customGSTWrap');if(gw)gw.style.display='block';document.getElementById('customGSTInput').value=gr;}
-    S('productDesc',p.description);}openModal('productModal');}
+    if(stdRates.includes(gr)){if(gstSel)gstSel.value=gr;}else{if(gstSel)gstSel.value='__custom__';const gw=document.getElementById('customGSTWrap');if(gw)gw.style.display='block';const cgi=document.getElementById('customGSTInput');if(cgi)cgi.value=gr;}
+    S('productDesc',p.description);
+  }
+  openModal('productModal');
+}
 function saveProduct(){const name=document.getElementById('productName').value.trim();const rate=parseFloat(document.getElementById('productRate').value);if(!name||!rate){toast('Name and rate required','error');return;}const id=document.getElementById('productId').value;const data={id:id||uid(),name,sac:document.getElementById('productSAC').value.trim(),category:getProdCategory(),unit:document.getElementById('productUnit').value,rate,gstRate:getProdGSTRate(),description:document.getElementById('productDesc').value.trim(),createdAt:id?(products.find(p=>p.id===id)?.createdAt||new Date().toISOString()):new Date().toISOString()};if(id){const idx=products.findIndex(p=>p.id===id);products[idx]=data;}else products.push(data);LS.set(KEYS.products,products);closeModal('productModal');renderProds();toast('Saved','success');}
 function deleteProduct(id){if(!confirm('Delete?'))return;products=products.filter(p=>p.id!==id);LS.set(KEYS.products,products);renderProds();}
 function renderProds(){
@@ -2627,6 +2591,36 @@ function getProdCategory(){
   return sel.value;
 }
 
+// ── Custom client industry ──────────────────────────────────────────
+function onClientIndChange(sel){
+  const wrap=document.getElementById('customIndustryWrap');
+  if(!wrap)return;
+  wrap.style.display=sel.value==='__custom__'?'block':'none';
+  if(sel.value==='__custom__') document.getElementById('customIndustryInput').focus();
+}
+function getClientIndustry(){
+  const sel=document.getElementById('clientIndustry');
+  if(sel.value==='__custom__'){
+    return document.getElementById('customIndustryInput')?.value.trim()||'Other';
+  }
+  return sel.value;
+}
+
+// ── Custom template category ────────────────────────────────────────
+function onTplCatChange(sel){
+  const wrap=document.getElementById('customTplCatWrap');
+  if(!wrap)return;
+  wrap.style.display=sel.value==='__custom__'?'block':'none';
+  if(sel.value==='__custom__') document.getElementById('customTplCatInput').focus();
+}
+function getTplCategory(){
+  const sel=document.getElementById('tplCategory');
+  if(sel.value==='__custom__'){
+    return document.getElementById('customTplCatInput')?.value.trim()||'follow_up';
+  }
+  return sel.value;
+}
+
 // ── Custom GST rate ─────────────────────────────────────────────────
 function onProdGSTChange(sel){
   const wrap=document.getElementById('customGSTWrap');
@@ -2777,8 +2771,41 @@ function initTpls(){
     {id:uid(),name:'Welcome Onboarding (SMS)',type:'sms',category:'welcome',subject:'',body:'Welcome to {{company}}! Your onboarding is now active. Our team will reach out shortly. — {{owner}}',createdAt:new Date().toISOString()},
   ];LS.set(KEYS.templates,templates);
 }
-function openTemplateModal(id){['templateId','tplName','tplSubject','tplBody'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});document.getElementById('templateModalTitle').innerHTML='<i class="fas fa-envelope-open-text"></i> Add Template';document.getElementById('tplType').value='email';document.getElementById('tplCategory').value='follow_up';if(id){const t=templates.find(x=>x.id===id);if(!t)return;document.getElementById('templateModalTitle').innerHTML='<i class="fas fa-edit"></i> Edit Template';const S=(f,v)=>{const el=document.getElementById(f);if(el)el.value=v||'';};S('templateId',t.id);S('tplName',t.name);S('tplType',t.type);S('tplCategory',t.category);S('tplSubject',t.subject||'');S('tplBody',t.body);}openModal('templateModal');}
-function saveTemplate(){const name=document.getElementById('tplName').value.trim(),body=document.getElementById('tplBody').value.trim();if(!name||!body){toast('Name and body required','error');return;}const id=document.getElementById('templateId').value;const data={id:id||uid(),name,type:document.getElementById('tplType').value,category:document.getElementById('tplCategory').value,subject:document.getElementById('tplSubject').value,body,createdAt:id?(templates.find(t=>t.id===id)?.createdAt||new Date().toISOString()):new Date().toISOString()};if(id){const idx=templates.findIndex(t=>t.id===id);templates[idx]=data;}else templates.push(data);LS.set(KEYS.templates,templates);closeModal('templateModal');renderTpls();toast('Template saved','success');}
+function openTemplateModal(id){
+  ['templateId','tplName','tplSubject','tplBody'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});
+  document.getElementById('templateModalTitle').innerHTML='<i class="fas fa-envelope-open-text"></i> Add Template';
+  document.getElementById('tplType').value='email';
+  const cw=document.getElementById('customTplCatWrap');if(cw)cw.style.display='none';
+  
+  const tSel=document.getElementById('tplCategory');
+  const stdTpl=['follow_up','proposal','invoice','payment_reminder','welcome','renewal'];
+  const customTpls = [...new Set(templates.map(t=>t.category).filter(c=>c && !stdTpl.includes(c)))].sort();
+  const stdOptions = '<option value="follow_up">Follow-Up</option><option value="proposal">Proposal</option><option value="invoice">Invoice</option><option value="payment_reminder">Payment Reminder</option><option value="welcome">Welcome / Onboarding</option><option value="renewal">Renewal</option>';
+  tSel.innerHTML = stdOptions + customTpls.map(c=>`<option value="${c}">${c}</option>`).join('') + '<option value="__custom__">➕ Custom Category...</option>';
+  tSel.value='follow_up';
+  
+  if(id){
+    const t=templates.find(x=>x.id===id);if(!t)return;
+    document.getElementById('templateModalTitle').innerHTML='<i class="fas fa-edit"></i> Edit Template';
+    const S=(f,v)=>{const el=document.getElementById(f);if(el)el.value=v||'';};
+    S('templateId',t.id);S('tplName',t.name);S('tplType',t.type);
+    
+    if(t.category){
+      if(stdTpl.includes(t.category) || customTpls.includes(t.category)){
+        tSel.value=t.category;
+      }else{
+        tSel.value='__custom__';
+        if(cw)cw.style.display='block';
+        document.getElementById('customTplCatInput').value=t.category;
+      }
+    }else{
+      tSel.value='follow_up';
+    }
+    S('tplSubject',t.subject||'');S('tplBody',t.body);
+  }
+  openModal('templateModal');
+}
+function saveTemplate(){const name=document.getElementById('tplName').value.trim(),body=document.getElementById('tplBody').value.trim();if(!name||!body){toast('Name and body required','error');return;}const id=document.getElementById('templateId').value;const data={id:id||uid(),name,type:document.getElementById('tplType').value,category:getTplCategory(),subject:document.getElementById('tplSubject').value,body,createdAt:id?(templates.find(t=>t.id===id)?.createdAt||new Date().toISOString()):new Date().toISOString()};if(id){const idx=templates.findIndex(t=>t.id===id);templates[idx]=data;}else templates.push(data);LS.set(KEYS.templates,templates);closeModal('templateModal');renderTpls();toast('Template saved','success');}
 function delTpl(id){if(!confirm('Delete?'))return;templates=templates.filter(t=>t.id!==id);LS.set(KEYS.templates,templates);renderTpls();}
 function filterTemplatesTab(f,el){ttabF=f;document.querySelectorAll('#sec-templates .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderTpls();}
 function renderTpls(){
@@ -4889,15 +4916,14 @@ async function _sendViaLocalServer(phone,message,type,id,toEmail='',toName='',su
     if(channel==='wa'||channel==='both'){
       if(!phone)throw new Error('Phone number required');
       if(statusEl)statusEl.innerHTML='<span style="color:#f59e0b">⏳ Sending PDF to WhatsApp…</span>';
-      const res=await fetch(`${WA_SERVER}/api/send`,{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({phone,message,pdfBase64:_sdPdfResult.base64,pdfName:_sdPdfResult.fname})
-      });
-      const data=await res.json();
-      if(data.success){
+      
+      if(typeof API!=='undefined' && API.isLoggedIn()){
+        const data = await API.sendWA({ phone, message, docType: type, docId: id });
         if(statusEl)statusEl.innerHTML='<span style="color:#10b981;font-weight:700">✅ PDF sent via WhatsApp!</span>';
-        toast(`✅ ${_sdPdfResult.fname} sent to WhatsApp!`,'success',5000);
-      }else throw new Error(data.error||'Send failed');
+        toast(`✅ PDF sent to WhatsApp!`,'success',5000);
+      } else {
+        throw new Error('Not logged in to SaaS backend');
+      }
     }
     if(channel==='email'||channel==='both'){
       await _sendEmailResend(toEmail,toName,subject,message,type,id);
@@ -5066,9 +5092,12 @@ async function sendBulkWAInvoices(leads_list){
     return{phone,message:`Hello ${l.name||'Sir/Madam'},\nPlease find attached your document from ${settings.bizName||'Us'}.\n\nThank you!`,pdfBase64:'',pdfName:'document.pdf'};
   });
   try{
-    const res=await fetch(`${WA_SERVER}/api/send-bulk`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({batch,delay:5})});
-    const data=await res.json();
-    toast(`✅ ${data.success}/${data.total} sent!`,'success',6000);
+    if(typeof API!=='undefined' && API.isLoggedIn()){
+      const data = await API.sendBulk({ batch, delay: 5 });
+      toast(`✅ ${data.success}/${data.total} sent!`,'success',6000);
+    } else {
+      throw new Error('Not logged in to SaaS backend');
+    }
   }catch(e){toast('Bulk send failed: '+e.message,'error');}
 }
 

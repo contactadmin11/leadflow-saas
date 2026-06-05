@@ -475,8 +475,14 @@ window.doRegister = async function() {
   const restored = await API.restoreSession().catch(() => false);
 
   if (!API.isLoggedIn() && !restored) {
-    // No session → redirect to landing page for login (no duplicate login screen)
-    window.location.href = '/';
+    // Show login screen locally instead of forcing a redirect to landing page
+    if (typeof showLoginScreen === 'function') {
+      document.getElementById('appContainer').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'block';
+      showLoginScreen();
+    } else {
+      window.location.href = '/';
+    }
     return;
   }
 
@@ -576,13 +582,13 @@ function _showPaywall(sub) {
       </p>
       <div style="display:grid;gap:10px;margin-bottom:20px">
         <button onclick="_upgradeCheckout('quarterly')" style="width:100%;padding:16px;background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;border-radius:12px;color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit">
-          🔥 ₹1,299 / Quarter — Most Popular
+          🔥 ₹749 / Quarter — Most Popular
         </button>
         <button onclick="_upgradeCheckout('monthly')" style="width:100%;padding:13px;background:none;border:1.5px solid #1e2d45;border-radius:10px;color:#f0f6ff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
-          ₹499 / Month
+          ₹299 / Month
         </button>
         <button onclick="_upgradeCheckout('yearly')" style="width:100%;padding:13px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">
-          ₹3,999 / Year — Best Value
+          ₹2,900 / Year — Best Value
         </button>
       </div>
       <p style="font-size:12px;color:#7a92b0"><i>🔒 7-day money-back guarantee · Secure via Razorpay · GST invoice provided</i></p>

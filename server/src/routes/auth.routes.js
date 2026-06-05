@@ -27,7 +27,7 @@ const COOKIE_OPTS = {
   httpOnly:  true,    // JS cannot read this cookie
   secure:    process.env.NODE_ENV === 'production', // HTTPS only in production
   sameSite:  process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  maxAge:    5 * 24 * 60 * 60 * 1000,  // 5 days in ms
+  maxAge:    7 * 24 * 60 * 60 * 1000,  // 7 days in ms
   path:      '/'
 };
 
@@ -44,10 +44,10 @@ const signAccess  = (user) => jwt.sign(
   { expiresIn: process.env.JWT_ACCESS_EXPIRES || '15m' }
 );
 
-const signRefresh = (user) => jwt.sign(
+const signRefresh = (user, expiresIn) => jwt.sign(
   { id: user._id },
   process.env.JWT_REFRESH_SECRET,
-  { expiresIn: process.env.JWT_REFRESH_EXPIRES || '5d' }
+  { expiresIn: expiresIn || process.env.JWT_REFRESH_EXPIRES || '7d' }
 );
 
 // ── Helper: count active devices for a user ─────────────────────────────────
@@ -114,7 +114,7 @@ router.post('/register',
       const deviceInfo = getDeviceInfo(req, bodyDeviceInfo);
       const accessToken  = signAccess(user);
       const refreshToken = signRefresh(user);
-      const exp = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+      const exp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
       await Session.create({
         userId:            user._id,
@@ -207,7 +207,7 @@ router.post('/login',
 
       const accessToken  = signAccess(user);
       const refreshToken = signRefresh(user);
-      const exp = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+      const exp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
       await Session.create({
         userId:            user._id,
@@ -284,8 +284,8 @@ router.post('/refresh', async (req, res, next) => {
     await session.save();
 
     const newAccess  = signAccess(user);
-    const newRefresh = signRefresh(user);
-    const exp = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+    const remainingSecs = Math.max(1, Math.floor((new Date(session.expiresAt).getTime() - Date.now()) / 1000));
+    const newRefresh = signRefresh(user, remainingSecs);
 
     await Session.create({
       userId:            user._id,
@@ -294,12 +294,15 @@ router.post('/refresh', async (req, res, next) => {
       deviceName:        session.deviceName,
       deviceInfo:        session.deviceInfo,
       ip:                req.ip,
-      expiresAt:         exp,
+      expiresAt:         session.expiresAt,
       lastSeen:          new Date()
     });
 
-    // Update cookie with new refresh token
-    res.cookie(REFRESH_COOKIE, newRefresh, COOKIE_OPTS);
+    // Update cookie with new refresh token and proper remaining maxAge
+    res.cookie(REFRESH_COOKIE, newRefresh, {
+      ...COOKIE_OPTS,
+      maxAge: Math.max(0, new Date(session.expiresAt).getTime() - Date.now())
+    });
 
     res.json({
       accessToken:  newAccess,
@@ -420,7 +423,7 @@ router.post('/otp/login',
       // ── 5. Issue tokens + set cookie ─────────────────────────────────────
       const accessToken  = signAccess(user);
       const refreshToken = signRefresh(user);
-      const exp = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000); // 5 days
+      const exp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
       await Session.create({
         userId:            user._id,
@@ -555,7 +558,7 @@ router.post('/google/login',
       const deviceInfo   = getDeviceInfo(req, bodyDeviceInfo);
       const accessToken  = signAccess(user);
       const refreshToken = signRefresh(user);
-      const exp = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+      const exp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
       await Session.create({
         userId:            user._id,

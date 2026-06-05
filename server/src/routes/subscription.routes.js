@@ -29,7 +29,7 @@ const PLANS = {
   quarterly: { amount: 74900, months: 3,  label: '₹749 / Quarter' },
   yearly:    { amount: 290000, months: 12, label: '₹2,900 / Year'    }
 };
-const TRIAL_DAYS = parseInt(process.env.TRIAL_DAYS) || 7;
+const TRIAL_DAYS = 7;
 const CURRENCY   = 'INR';
 
 // ── Lazy-load Razorpay (only if credentials are set) ──────────────────────

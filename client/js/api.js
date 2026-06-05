@@ -98,8 +98,13 @@ const API = {
       if (refreshed) return this._request(method, path, body, false);
       else {
         this.clearSession();
-        // Redirect to landing page
-        window.location.href = '/';
+        if (typeof showLoginScreen === 'function') {
+          document.getElementById('appContainer').style.display = 'none';
+          document.getElementById('loginScreen').style.display = 'block';
+          showLoginScreen();
+        } else {
+          window.location.href = '/';
+        }
         return;
       }
     }
