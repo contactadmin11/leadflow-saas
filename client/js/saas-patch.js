@@ -248,16 +248,42 @@ window._sendViaSameBrowserWA = async function(phone, message, type, id) {
   const resolvedId = await _resolveDocId(type, id);
   console.log('Invoice ID being used:', resolvedId);
 
-  const baseUrl = window.location.origin;
-  const link = `${baseUrl}/api/public/${type}/${resolvedId}/pdf`;
-  const waMsg = `${message}\n\n📄 Download PDF: ${link}`;
-  const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(waMsg)}`;
+  // Direct WhatsApp Web URL (bypasses wa.me redirect screen/Open App options)
+  const waUrl = `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
 
-  // Use the same window name ('leadflow_whatsapp_tab') to reuse the tab
-  window.open(waUrl, 'leadflow_whatsapp_tab');
+  // Use the same window name ('whatsapp_web_tab') to reuse the tab
+  window.open(waUrl, 'whatsapp_web_tab');
+
+  // Find the customer details to email them the PDF automatically in the background
+  const doc = type === 'quote' ? quotes.find(x => x.id === id) : invoices.find(x => x.id === id);
+  let toEmail = '', toName = '';
+  if (doc) {
+    if (type === 'quote') {
+      const ref = doc.clientRefId;
+      if (ref) {
+        if (ref.startsWith('C:')) { const c = clients.find(x => x.id === ref.slice(2)); if (c) { toEmail = c.email; toName = c.name; } }
+        else if (ref.startsWith('L:')) { const l = leads.find(x => x.id === ref.slice(2)); if (l) { toEmail = l.email; toName = l.name; } }
+      }
+    } else {
+      const ref = doc.clientId;
+      if (ref) {
+        if (ref.startsWith('C:')) { const c = clients.find(x => x.id === ref.slice(2)); if (c) { toEmail = c.email; toName = c.name; } }
+        else if (ref.startsWith('L:')) { const l = leads.find(x => x.id === ref.slice(2)); if (l) { toEmail = l.email; toName = l.name; } }
+      }
+    }
+  }
+
+  if (toEmail) {
+    if (typeof toast === 'function') toast('⏳ Sending PDF to customer email in background...', 'info', 3000);
+    const subject = `${type === 'quote' ? 'Quotation' : 'Invoice'} ${doc ? (type === 'quote' ? doc.quoteNo : doc.invoiceNo) : ''} from ${settings.bizName || 'Us'}`;
+    const emailMsg = `Please find your ${type === 'quote' ? 'quotation' : 'invoice'} attached.`;
+    _sendEmailWithPDF(toEmail, toName || toEmail, subject, emailMsg, type, id).catch(err => console.error('Auto-email error:', err));
+  } else {
+    if (typeof toast === 'function') toast('⚠️ No email address found to auto-send PDF!', 'warning', 6000);
+  }
 
   if (typeof toast === 'function') {
-    toast('WhatsApp Web opened with PDF link inserted!', 'info', 4000);
+    toast('WhatsApp Web opened with message inserted!', 'info', 4000);
   }
 };
 
