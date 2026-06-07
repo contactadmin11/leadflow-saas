@@ -816,13 +816,34 @@ const observer = new IntersectionObserver(entries => {
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
 // == If already logged in, show Go to App button ==
-if (API.isLoggedIn()) {
-  const cta = document.querySelector('.nav-cta');
-  if (cta) cta.innerHTML = `
-    <button class="btn-primary" onclick="window.location.href='/index.html'">
-      <i class="fas fa-tachometer-alt"></i> Go to Dashboard
-    </button>`;
-}
+(async function checkSession() {
+  if (typeof API !== 'undefined') {
+    const restored = await API.restoreSession().catch(() => false);
+    if (API.isLoggedIn() || restored) {
+      const cta = document.querySelector('.nav-cta');
+      if (cta) {
+        cta.innerHTML = `
+          <button class="btn-primary" onclick="window.location.href='/index.html'">
+            <i class="fas fa-tachometer-alt"></i> Go to Dashboard
+          </button>`;
+      }
+      
+      const heroBtns = document.querySelector('.hero-btns');
+      if (heroBtns) {
+        heroBtns.innerHTML = `
+          <button class="btn-hero primary" onclick="window.location.href='/index.html'">
+            <i class="fas fa-tachometer-alt"></i> Go to Dashboard
+          </button>`;
+      }
+      
+      // Auto-redirect if they visited / or /landing.html, unless they clicked back from the app
+      const ref = document.referrer || '';
+      if (!ref.includes('/index.html')) {
+        window.location.href = '/index.html';
+      }
+    }
+  }
+})();
 
 // == FIREBASE OTP LOGIC ==
 window.confirmationResult = null;

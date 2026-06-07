@@ -30,36 +30,70 @@
     return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
   }
 
+  // ── Global array in memory map ───────────────────────────────────────────
+  const GLOBAL_MAP = {
+    'lf2_leads':      'leads',
+    'lf2_contacts':   'contacts',
+    'lf2_clients':    'clients',
+    'lf2_products':   'products',
+    'lf2_quotes':     'quotes',
+    'lf2_invoices':   'invoices',
+    'lf2_payments':   'payments',
+    'lf2_activities': 'activities',
+    'lf2_templates':  'templates',
+    'lf2_rules':      'autoRules'
+  };
+
+  // ── UI render function map ───────────────────────────────────────────────
+  const RENDER_MAP = {
+    'lf2_leads':      'renderLeads',
+    'lf2_contacts':   'renderContacts',
+    'lf2_clients':    'renderClients',
+    'lf2_products':   'renderProds',
+    'lf2_quotes':     'renderQuotes',
+    'lf2_invoices':   'renderInvoices',
+    'lf2_payments':   'renderPmts',
+    'lf2_activities': 'renderActs',
+    'lf2_templates':  'renderTpls',
+    'lf2_rules':      'renderAuto'
+  };
+
+  // Load persistent ID mapping from localStorage
+  window._lfIdMap = {};
+  try {
+    window._lfIdMap = JSON.parse(localStorage.getItem('lf_id_map') || '{}');
+  } catch {}
+
   // ── Key → API mapping ────────────────────────────────────────────────────
   const KEY_MAP = {
-    'lf_leads':      { get: () => API.getLeads(),       bulk: (d) => API.bulkLeads(d) },
-    'lf_contacts':   { get: () => API.getContacts() },
-    'lf_clients':    { get: () => API.getClients() },
-    'lf_products':   { get: () => API.getProducts() },
-    'lf_quotes':     { get: () => API.getQuotes() },
-    'lf_invoices':   { get: () => API.getInvoices() },
-    'lf_payments':   { get: () => API.getPayments() },
-    'lf_activities': { get: () => API.getActivities() },
-    'lf_templates':  { get: () => API.getTemplates() },
-    'lf_rules':      { get: () => API.getRules() },
-    'lf_settings':   { get: () => API.getSettings() },
+    'lf2_leads':      { get: () => API.getLeads(),       bulk: (d) => API.bulkLeads(d) },
+    'lf2_contacts':   { get: () => API.getContacts() },
+    'lf2_clients':    { get: () => API.getClients() },
+    'lf2_products':   { get: () => API.getProducts() },
+    'lf2_quotes':     { get: () => API.getQuotes() },
+    'lf2_invoices':   { get: () => API.getInvoices() },
+    'lf2_payments':   { get: () => API.getPayments() },
+    'lf2_activities': { get: () => API.getActivities() },
+    'lf2_templates':  { get: () => API.getTemplates() },
+    'lf2_rules':      { get: () => API.getRules() },
+    'lf2_settings':   { get: () => API.getSettings() },
   };
 
   // ── Individual save functions (called after original LS.set) ─────────────
   // These are debounced to avoid spamming the API on rapid updates.
 
   const SAVE_MAP = {
-    'lf_leads':      debounce(syncLeads,      500),
-    'lf_contacts':   debounce(syncContacts,   500),
-    'lf_clients':    debounce(syncClients,    500),
-    'lf_products':   debounce(syncProducts,   500),
-    'lf_quotes':     debounce(syncQuotes,     500),
-    'lf_invoices':   debounce(syncInvoices,   500),
-    'lf_payments':   debounce(syncPayments,   500),
-    'lf_activities': debounce(syncActivities, 500),
-    'lf_templates':  debounce(syncTemplates,  500),
-    'lf_rules':      debounce(syncRules,      500),
-    'lf_settings':   debounce(syncSettings,   800),
+    'lf2_leads':      debounce(syncLeads,      500),
+    'lf2_contacts':   debounce(syncContacts,   500),
+    'lf2_clients':    debounce(syncClients,    500),
+    'lf2_products':   debounce(syncProducts,   500),
+    'lf2_quotes':     debounce(syncQuotes,     500),
+    'lf2_invoices':   debounce(syncInvoices,   500),
+    'lf2_payments':   debounce(syncPayments,   500),
+    'lf2_activities': debounce(syncActivities, 500),
+    'lf2_templates':  debounce(syncTemplates,  500),
+    'lf2_rules':      debounce(syncRules,      500),
+    'lf2_settings':   debounce(syncSettings,   800),
   };
 
   // ── Sync functions — smart diff, only send new/changed items ─────────────
@@ -72,8 +106,8 @@
 
   async function syncLeads() {
     if (!_bridgeReady) return;
-    const items = getLocalArr('lf_leads');
-    await smartSync('lf_leads', items, {
+    const items = getLocalArr('lf2_leads');
+    await smartSync('lf2_leads', items, {
       create: (d) => API.createLead(d),
       update: (id, d) => API.updateLead(id, d),
       remove: (id) => API.deleteLead(id)
@@ -82,7 +116,7 @@
 
   async function syncContacts() {
     if (!_bridgeReady) return;
-    await smartSync('lf_contacts', getLocalArr('lf_contacts'), {
+    await smartSync('lf2_contacts', getLocalArr('lf2_contacts'), {
       create: (d) => API.createContact(d),
       update: (id, d) => API.updateContact(id, d),
       remove: (id) => API.deleteContact(id)
@@ -91,7 +125,7 @@
 
   async function syncClients() {
     if (!_bridgeReady) return;
-    await smartSync('lf_clients', getLocalArr('lf_clients'), {
+    await smartSync('lf2_clients', getLocalArr('lf2_clients'), {
       create: (d) => API.createClient(d),
       update: (id, d) => API.updateClient(id, d),
       remove: (id) => API.deleteClient(id)
@@ -100,7 +134,7 @@
 
   async function syncProducts() {
     if (!_bridgeReady) return;
-    await smartSync('lf_products', getLocalArr('lf_products'), {
+    await smartSync('lf2_products', getLocalArr('lf2_products'), {
       create: (d) => API.createProduct(d),
       update: (id, d) => API.updateProduct(id, d),
       remove: (id) => API.deleteProduct(id)
@@ -109,7 +143,7 @@
 
   async function syncQuotes() {
     if (!_bridgeReady) return;
-    await smartSync('lf_quotes', getLocalArr('lf_quotes'), {
+    await smartSync('lf2_quotes', getLocalArr('lf2_quotes'), {
       create: (d) => API.createQuote(d),
       update: (id, d) => API.updateQuote(id, d),
       remove: (id) => API.deleteQuote(id)
@@ -118,7 +152,7 @@
 
   async function syncInvoices() {
     if (!_bridgeReady) return;
-    await smartSync('lf_invoices', getLocalArr('lf_invoices'), {
+    await smartSync('lf2_invoices', getLocalArr('lf2_invoices'), {
       create: (d) => API.createInvoice(d),
       update: (id, d) => API.updateInvoice(id, d),
       remove: (id) => API.deleteInvoice(id)
@@ -127,7 +161,7 @@
 
   async function syncPayments() {
     if (!_bridgeReady) return;
-    await smartSync('lf_payments', getLocalArr('lf_payments'), {
+    await smartSync('lf2_payments', getLocalArr('lf2_payments'), {
       create: (d) => API.createPayment(d),
       update: null,
       remove: (id) => API.deletePayment(id)
@@ -136,7 +170,7 @@
 
   async function syncActivities() {
     if (!_bridgeReady) return;
-    await smartSync('lf_activities', getLocalArr('lf_activities'), {
+    await smartSync('lf2_activities', getLocalArr('lf2_activities'), {
       create: (d) => API.createActivity(d),
       update: null,
       remove: (id) => API.deleteActivity(id)
@@ -145,7 +179,7 @@
 
   async function syncTemplates() {
     if (!_bridgeReady) return;
-    await smartSync('lf_templates', getLocalArr('lf_templates'), {
+    await smartSync('lf2_templates', getLocalArr('lf2_templates'), {
       create: (d) => API.createTemplate(d),
       update: (id, d) => API.updateTemplate(id, d),
       remove: (id) => API.deleteTemplate(id)
@@ -154,7 +188,7 @@
 
   async function syncRules() {
     if (!_bridgeReady) return;
-    await smartSync('lf_rules', getLocalArr('lf_rules'), {
+    await smartSync('lf2_rules', getLocalArr('lf2_rules'), {
       create: (d) => API.createRule(d),
       update: (id, d) => API.updateRule(id, d),
       remove: (id) => API.deleteRule(id)
@@ -164,7 +198,7 @@
   async function syncSettings() {
     if (!_bridgeReady) return;
     try {
-      const s = JSON.parse(localStorage.getItem('lf_settings') || '{}');
+      const s = JSON.parse(localStorage.getItem('lf2_settings') || '{}');
       await API.saveSettings(s);
     } catch(e) { console.warn('[Bridge] Settings sync failed:', e.message); }
   }
@@ -193,10 +227,29 @@
                   // The server assigns the real MongoDB ObjectId.
                   // E.g., res might be { success: true, invoice: { _id: "...", ... } }
                   // Find the nested object that has the _id
-                  const newObj = Object.values(res).find(v => v && v._id);
+                  const newObj = res._id ? res : Object.values(res).find(v => v && v._id);
                   if (newObj && newObj._id) {
-                    item.id = newObj._id; // Update local memory immediately
-                    item._id = newObj._id;
+                    const localId = id;
+                    const mongoId = newObj._id;
+
+                    // Record in ID map
+                    window._lfIdMap = window._lfIdMap || {};
+                    window._lfIdMap[localId] = mongoId;
+                    localStorage.setItem('lf_id_map', JSON.stringify(window._lfIdMap));
+
+                    item.id = mongoId; // Update local memory copy immediately
+                    item._id = mongoId;
+
+                    // Update global array in memory
+                    const globalName = GLOBAL_MAP[key];
+                    if (globalName && window[globalName]) {
+                      const globArr = window[globalName];
+                      const globItem = globArr.find(g => g.id === localId || g._id === localId);
+                      if (globItem) {
+                        globItem.id = mongoId;
+                        globItem._id = mongoId;
+                      }
+                    }
                   }
                 })
                 .catch(e => console.warn('[Bridge] create failed:', e.message))
@@ -224,6 +277,12 @@
       localStorage.setItem(key, JSON.stringify(currentItems));
       
       _lastSynced[key] = JSON.parse(JSON.stringify(currentItems));
+
+      // Trigger UI re-render for the active section so the new ObjectIds are updated in the tables
+      const renderFnName = RENDER_MAP[key];
+      if (renderFnName && typeof window[renderFnName] === 'function') {
+        try { window[renderFnName](); } catch(e) { console.warn('[Bridge] UI Re-render failed:', e.message); }
+      }
     } catch(e) {
       console.warn('[Bridge] smartSync failed for', key, ':', e.message);
     }
@@ -383,31 +442,31 @@
       const rules      = mapId(extract(rulesData,     'rules'));
       const settings   = extractObj(settingsData,     'settings');
 
-      localStorage.setItem('lf_leads',      JSON.stringify(leads));
-      localStorage.setItem('lf_contacts',   JSON.stringify(contacts));
-      localStorage.setItem('lf_clients',    JSON.stringify(clients));
-      localStorage.setItem('lf_products',   JSON.stringify(products));
-      localStorage.setItem('lf_quotes',     JSON.stringify(quotes));
-      localStorage.setItem('lf_invoices',   JSON.stringify(invoices));
-      localStorage.setItem('lf_payments',   JSON.stringify(payments));
-      localStorage.setItem('lf_activities', JSON.stringify(activities));
-      localStorage.setItem('lf_templates',  JSON.stringify(templates));
-      localStorage.setItem('lf_rules',      JSON.stringify(rules));
+      localStorage.setItem('lf2_leads',      JSON.stringify(leads));
+      localStorage.setItem('lf2_contacts',   JSON.stringify(contacts));
+      localStorage.setItem('lf2_clients',    JSON.stringify(clients));
+      localStorage.setItem('lf2_products',   JSON.stringify(products));
+      localStorage.setItem('lf2_quotes',     JSON.stringify(quotes));
+      localStorage.setItem('lf2_invoices',   JSON.stringify(invoices));
+      localStorage.setItem('lf2_payments',   JSON.stringify(payments));
+      localStorage.setItem('lf2_activities', JSON.stringify(activities));
+      localStorage.setItem('lf2_templates',  JSON.stringify(templates));
+      localStorage.setItem('lf2_rules',      JSON.stringify(rules));
       if (settings && Object.keys(settings).length) {
-        localStorage.setItem('lf_settings', JSON.stringify(settings));
+        localStorage.setItem('lf2_settings', JSON.stringify(settings));
       }
 
       // Store last synced snapshots
-      _lastSynced['lf_leads']      = JSON.parse(JSON.stringify(leads));
-      _lastSynced['lf_contacts']   = JSON.parse(JSON.stringify(contacts));
-      _lastSynced['lf_clients']    = JSON.parse(JSON.stringify(clients));
-      _lastSynced['lf_products']   = JSON.parse(JSON.stringify(products));
-      _lastSynced['lf_quotes']     = JSON.parse(JSON.stringify(quotes));
-      _lastSynced['lf_invoices']   = JSON.parse(JSON.stringify(invoices));
-      _lastSynced['lf_payments']   = JSON.parse(JSON.stringify(payments));
-      _lastSynced['lf_activities'] = JSON.parse(JSON.stringify(activities));
-      _lastSynced['lf_templates']  = JSON.parse(JSON.stringify(templates));
-      _lastSynced['lf_rules']      = JSON.parse(JSON.stringify(rules));
+      _lastSynced['lf2_leads']      = JSON.parse(JSON.stringify(leads));
+      _lastSynced['lf2_contacts']   = JSON.parse(JSON.stringify(contacts));
+      _lastSynced['lf2_clients']    = JSON.parse(JSON.stringify(clients));
+      _lastSynced['lf2_products']   = JSON.parse(JSON.stringify(products));
+      _lastSynced['lf2_quotes']     = JSON.parse(JSON.stringify(quotes));
+      _lastSynced['lf2_invoices']   = JSON.parse(JSON.stringify(invoices));
+      _lastSynced['lf2_payments']   = JSON.parse(JSON.stringify(payments));
+      _lastSynced['lf2_activities'] = JSON.parse(JSON.stringify(activities));
+      _lastSynced['lf2_templates']  = JSON.parse(JSON.stringify(templates));
+      _lastSynced['lf2_rules']      = JSON.parse(JSON.stringify(rules));
 
       _bridgeReady = true;
       console.log(`[Bridge] ✅ Loaded: ${leads.length} leads, ${clients.length} clients, ${invoices.length} invoices, ${quotes.length} quotes`);

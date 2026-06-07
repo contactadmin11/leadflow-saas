@@ -315,8 +315,12 @@ async function _resolveDocId(type, localId) {
     // If it looks like a MongoDB ObjectId already, return as-is
     if (/^[0-9a-f]{24}$/i.test(localId)) return localId;
 
+    // Check ID map first
+    const mapped = window._lfIdMap?.[localId];
+    if (mapped) return mapped;
+
     // Search in local storage for the item, then find its _id
-    const key   = type === 'invoice' ? 'lf_invoices' : 'lf_quotes';
+    const key   = type === 'invoice' ? 'lf2_invoices' : 'lf2_quotes';
     const items = JSON.parse(localStorage.getItem(key) || '[]');
     const item  = items.find(i => (i.id === localId || i._id === localId));
     return item?._id || item?.id || localId;
