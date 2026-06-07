@@ -20,8 +20,6 @@ router.use(protect);
  * Send a WhatsApp message with optional PDF attachment.
  * Body: { phone, message, docType?, docId? }
  */
-const logger = require('../config/logger');
-
 router.post('/whatsapp', async (req, res, next) => {
   try {
     const { phone, message, docType, docId } = req.body;
@@ -29,53 +27,22 @@ router.post('/whatsapp', async (req, res, next) => {
 
     let pdfBuffer = null;
     let pdfName   = null;
+    let downloadLink = null;
 
     if (docType && docId) {
       const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
       pdfBuffer = buffer;
       pdfName   = filename;
-      
+      downloadLink = `${process.env.CLIENT_URL || ('https://' + req.get('host'))}/api/public/${docType}/${docId}/pdf`;
       if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
       if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
-
-      // Auto-email PDF to customer
-      const settings = await Settings.findOne({ userId: req.user.id });
-      if (settings) {
-        let toEmail, toName, docNo, subject;
-        if (docType === 'invoice') {
-          const doc = await Invoice.findById(docId);
-          if (doc) {
-            toEmail = doc.clientEmail;
-            toName = doc.clientName;
-            docNo = doc.invoiceNo;
-            subject = `Invoice ${docNo} from ${settings.bizName || 'LeadFlow'}`;
-          }
-        } else if (docType === 'quote') {
-          const doc = await Quote.findById(docId);
-          if (doc) {
-            toEmail = doc.clientEmail;
-            toName = doc.clientName;
-            docNo = doc.quoteNo;
-            subject = `Quotation ${docNo} from ${settings.bizName || 'LeadFlow'}`;
-          }
-        }
-
-        if (toEmail) {
-          await sendEmail(
-            settings,
-            toEmail,
-            toName || toEmail,
-            subject,
-            `Please find attached your ${docType === 'invoice' ? 'invoice' : 'quotation'} document.`,
-            pdfBuffer,
-            pdfName
-          ).catch(err => logger.error(`[Email Auto-Send] Error: ${err.message}`));
-        }
-      }
     }
 
-    // Send via WhatsApp without any download link or PDF file attachment
-    const result = await sendMessage(req.user.id, phone, message, null, null);
+    // Rule 5: Append public download link to WA message, do not send PDF file binary directly
+    const finalMessage = downloadLink ? `${message}\n\n📄 Download PDF: ${downloadLink}` : message;
+    
+    // We pass null for pdfBuffer to skip binary attachment for WA, relying entirely on the link
+    const result = await sendMessage(req.user.id, phone, finalMessage, null, null);
     if (!result.success) return res.status(400).json(result);
 
     await audit({ userId: req.user.id, action: 'WA_SENT', resource: docType || 'message', resourceId: docId, details: { phone }, req });
@@ -125,17 +92,20 @@ router.post('/both', async (req, res, next) => {
 
     let pdfBuffer = null;
     let pdfName   = null;
+    let downloadLink = null;
 
     if (docType && docId) {
       const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
       pdfBuffer = buffer;
       pdfName   = filename;
+      downloadLink = `${process.env.CLIENT_URL || ('https://' + req.get('host'))}/api/public/${docType}/${docId}/pdf`;
       if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
       if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
     }
 
     if (phone) {
-      results.whatsapp = await sendMessage(req.user.id, phone, message, null, null);
+      const waMessage = downloadLink ? `${message}\n\n📄 Download PDF: ${downloadLink}` : message;
+      results.whatsapp = await sendMessage(req.user.id, phone, waMessage, null, null);
     }
     if (toEmail && settings) {
       results.email = await sendEmail(
