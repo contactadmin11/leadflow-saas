@@ -4752,8 +4752,7 @@ async function _sendViaN8n(channel, phone, message, type, id, toEmail='', toName
     if(statusEl)statusEl.innerHTML=`<span style="color:#ef4444">❌ ${e.message}</span>`;
     toast('n8n error: '+e.message,'error',6000);
     if(channel==='wa'){
-      _autoDownloadPDF();
-      window.open(`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`,'_blank');
+      _sendViaSameBrowserWA(phone,message,type,id);
     }
   }
 }
@@ -4944,11 +4943,11 @@ async function _sendViaSameBrowserWA(phone,message,type,id){
   const waMsg = `${message}\n\n📄 Download PDF: ${link}`;
 
   const waUrl=`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(waMsg)}`;
-  if(_waTab&&!_waTab.closed){_waTab.location.href=waUrl;_waTab.focus();}
-  else{_waTab=window.open(waUrl,'leadflow_whatsapp_tab');}
   
-  // No need to autoDownloadPDF or showWAGuide since the user can just click the link!
-  // But we'll keep a simple toast just in case.
+  // Rely on the browser's native window targeting to reuse the tab
+  // Accessing _waTab.location.href cross-origin throws a DOMException
+  window.open(waUrl, 'leadflow_whatsapp_tab');
+  
   toast('WhatsApp Web opened with PDF link inserted!','info', 4000);
 }
 
