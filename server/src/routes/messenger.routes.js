@@ -28,11 +28,14 @@ router.post('/whatsapp', async (req, res, next) => {
     let pdfBuffer = null;
     let pdfName   = null;
 
-    if (docType && docId) {
+    if (req.body.pdfBase64) {
+      const b64Data = req.body.pdfBase64.replace(/^data:application\/pdf;base64,/, '');
+      pdfBuffer = Buffer.from(b64Data, 'base64');
+      pdfName = req.body.pdfName || 'document.pdf';
+    } else if (docType && docId) {
       const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
       pdfBuffer = buffer;
       pdfName   = filename;
-      // Mark as Sent
       if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
       if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
     }
@@ -61,7 +64,11 @@ router.post('/email', async (req, res, next) => {
     let pdfBuffer = null;
     let pdfName   = null;
 
-    if (docType && docId) {
+    if (req.body.pdfBase64) {
+      const b64Data = req.body.pdfBase64.replace(/^data:application\/pdf;base64,/, '');
+      pdfBuffer = Buffer.from(b64Data, 'base64');
+      pdfName = req.body.pdfName || 'document.pdf';
+    } else if (docType && docId) {
       const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
       pdfBuffer = buffer;
       pdfName   = filename;
@@ -88,8 +95,11 @@ router.post('/both', async (req, res, next) => {
     let pdfBuffer = null;
     let pdfName   = null;
 
-    // Generate PDF once, use for both
-    if (docType && docId) {
+    if (req.body.pdfBase64) {
+      const b64Data = req.body.pdfBase64.replace(/^data:application\/pdf;base64,/, '');
+      pdfBuffer = Buffer.from(b64Data, 'base64');
+      pdfName = req.body.pdfName || 'document.pdf';
+    } else if (docType && docId) {
       const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
       pdfBuffer = buffer;
       pdfName   = filename;

@@ -127,7 +127,7 @@ router.post('/register',
       });
 
       // Set httpOnly cookie for refresh token
-      res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTS);
+      res.cookie(REFRESH_COOKIE, refreshToken, { ...COOKIE_OPTS, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
       await audit({ userId: user._id, action: 'REGISTER', resource: 'User', req });
       res.status(201).json({
@@ -221,7 +221,7 @@ router.post('/login',
       });
 
       // Set httpOnly refresh cookie
-      res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTS);
+      res.cookie(REFRESH_COOKIE, refreshToken, { ...COOKIE_OPTS, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
       await audit({ userId: user._id, action: 'LOGIN', resource: 'User', details: { deviceName: deviceInfo.name }, req });
 
@@ -435,7 +435,7 @@ router.post('/otp/login',
         expiresAt:         exp
       });
 
-      res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTS);
+      res.cookie(REFRESH_COOKIE, refreshToken, { ...COOKIE_OPTS, maxAge: 7 * 24 * 60 * 60 * 1000 });
       await audit({ userId: user._id, action: 'LOGIN_OTP', resource: 'User', details: { mobile: phone, isNewUser }, req });
 
       res.json({
@@ -570,7 +570,7 @@ router.post('/google/login',
         expiresAt:         exp
       });
 
-      res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTS);
+      res.cookie(REFRESH_COOKIE, refreshToken, { ...COOKIE_OPTS, maxAge: 7 * 24 * 60 * 60 * 1000 });
       await audit({ userId: user._id, action: 'LOGIN_GOOGLE', resource: 'User', details: { email, isNewUser }, req });
 
       res.json({

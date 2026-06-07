@@ -4918,7 +4918,7 @@ async function _sendViaLocalServer(phone,message,type,id,toEmail='',toName='',su
       if(statusEl)statusEl.innerHTML='<span style="color:#f59e0b">⏳ Sending PDF to WhatsApp…</span>';
       
       if(typeof API!=='undefined' && API.isLoggedIn()){
-        const data = await API.sendWA({ phone, message, docType: type, docId: id });
+        const data = await API.sendWA({ phone, message, docType: type, docId: id, pdfBase64: _sdPdfResult.base64, pdfName: _sdPdfResult.fname });
         if(statusEl)statusEl.innerHTML='<span style="color:#10b981;font-weight:700">✅ PDF sent via WhatsApp!</span>';
         toast(`✅ PDF sent to WhatsApp!`,'success',5000);
       } else {
@@ -5031,7 +5031,7 @@ async function _sendEmailWithPDF(email,name,subject,message,type,id){
     if(typeof API!=='undefined'&&API.isLoggedIn()){
       const result=await API.sendEmail({
         toEmail:email,toName:name||email,subject,message,
-        docType:type,docId:id
+        docType:type,docId:id, pdfBase64: _sdPdfResult.base64, pdfName: _sdPdfResult.fname
       });
       if(result&&result.success){
         toast(`✅ Email with PDF sent to ${email}!`,'success',5000);
