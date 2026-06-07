@@ -13,7 +13,11 @@ const licenseSchema = new mongoose.Schema({
   notes:         { type: String },
   activeDevices: { type: Number, default: 0 },
   lastVerifiedAt:{ type: Date },
-  daysRemaining: { type: Number, default: 0 }
+  daysRemaining: { type: Number, default: 0 },
+  // Device binding — stores fingerprints of bound devices
+  boundDevices:  [{ type: String }],
+  maxDevices:    { type: Number, default: 1 }
+
 }, { timestamps: true });
 
 licenseSchema.index({ key: 1 });

@@ -5,34 +5,15 @@
 const express    = require('express');
 const Invoice    = require('../models/Invoice');
 const Quote      = require('../models/Quote');
-const Settings   = require('../models/Settings');
 const { protect }= require('../middleware/auth');
 const { audit }  = require('../services/audit.service');
 const { sendEmail }    = require('../services/email.service');
 const { sendMessage, sendBulk } = require('../services/whatsapp.service');
-const { generateInvoicePDF, generateQuotePDF } = require('../services/pdf.service');
+const { createPDFBuffer } = require('../services/attachment.service');
+const Settings   = require('../models/Settings');
 const router = express.Router();
 
 router.use(protect);
-
-const q = (uid, extra = {}) => ({ userId: uid, deletedAt: null, ...extra });
-
-/**
- * Helper: Load invoice or quote and generate PDF buffer.
- */
-const loadDocPDF = async (userId, docType, docId, settingsObj) => {
-  if (docType === 'invoice') {
-    const doc = await Invoice.findOne(q(userId, { _id: docId })).lean();
-    if (!doc) throw new Error('Invoice not found');
-    const pdf = await generateInvoicePDF(doc, settingsObj);
-    return { doc, pdf, filename: `${doc.invoiceNo}.pdf` };
-  } else {
-    const doc = await Quote.findOne(q(userId, { _id: docId })).lean();
-    if (!doc) throw new Error('Quote not found');
-    const pdf = await generateQuotePDF(doc, settingsObj);
-    return { doc, pdf, filename: `${doc.quoteNo}.pdf` };
-  }
-};
 
 /**
  * POST /api/send/whatsapp
@@ -48,9 +29,8 @@ router.post('/whatsapp', async (req, res, next) => {
     let pdfName   = null;
 
     if (docType && docId) {
-      const settings = await Settings.findOne({ userId: req.user.id }).lean();
-      const { pdf, filename } = await loadDocPDF(req.user.id, docType, docId, settings || {});
-      pdfBuffer = pdf;
+      const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
+      pdfBuffer = buffer;
       pdfName   = filename;
       // Mark as Sent
       if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
@@ -82,8 +62,8 @@ router.post('/email', async (req, res, next) => {
     let pdfName   = null;
 
     if (docType && docId) {
-      const { pdf, filename } = await loadDocPDF(req.user.id, docType, docId, settings.toObject());
-      pdfBuffer = pdf;
+      const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
+      pdfBuffer = buffer;
       pdfName   = filename;
       if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
       if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
@@ -109,9 +89,9 @@ router.post('/both', async (req, res, next) => {
     let pdfName   = null;
 
     // Generate PDF once, use for both
-    if (docType && docId && settings) {
-      const { pdf, filename } = await loadDocPDF(req.user.id, docType, docId, settings.toObject());
-      pdfBuffer = pdf;
+    if (docType && docId) {
+      const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
+      pdfBuffer = buffer;
       pdfName   = filename;
       if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
       if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
@@ -121,8 +101,15 @@ router.post('/both', async (req, res, next) => {
       results.whatsapp = await sendMessage(req.user.id, phone, message, pdfBuffer, pdfName);
     }
     if (toEmail && settings) {
-      results.email = await sendEmail(settings, toEmail, toName, subject || 'Document from ' + (settings.bizName || 'LeadFlow'), message, pdfBuffer, pdfName)
-        .catch(err => ({ success: false, error: err.message }));
+      results.email = await sendEmail(
+        settings,
+        toEmail,
+        toName,
+        subject || 'Document from ' + (settings.bizName || 'LeadFlow'),
+        message,
+        pdfBuffer,
+        pdfName
+      ).catch(err => ({ success: false, error: err.message }));
     }
 
     await audit({ userId: req.user.id, action: 'BOTH_SENT', resource: docType || 'message', resourceId: docId, req });

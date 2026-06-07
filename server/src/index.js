@@ -12,6 +12,7 @@ const mongoose   = require('mongoose');
 const path       = require('path');
 const fs         = require('fs');
 const JavaScriptObfuscator = require('javascript-obfuscator');
+const rateLimitAdvanced = require('./middleware/rateLimitAdvanced');
 
 const logger          = require('./config/logger');
 const authRoutes      = require('./routes/auth.routes');
@@ -104,24 +105,24 @@ app.use('/api/auth',         authRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 
 // All routes below require: (1) valid JWT, (2) active subscription
-app.use('/api/leads',      protect, subscriptionGuard, leadsRoutes);
-app.use('/api/contacts',   protect, subscriptionGuard, contactsRoutes);
-app.use('/api/clients',    protect, subscriptionGuard, clientsRoutes);
-app.use('/api/products',   protect, subscriptionGuard, productsRoutes);
-app.use('/api/quotes',     protect, subscriptionGuard, quotesRoutes);
-app.use('/api/invoices',   protect, subscriptionGuard, invoicesRoutes);
-app.use('/api/payments',   protect, subscriptionGuard, paymentsRoutes);
-app.use('/api/activities', protect, subscriptionGuard, activitiesRoutes);
-app.use('/api/templates',  protect, subscriptionGuard, templatesRoutes);
-app.use('/api/automation', protect, subscriptionGuard, automationRoutes);
-app.use('/api/onboarding', protect, subscriptionGuard, onboardingRoutes);
-app.use('/api/send',       protect, subscriptionGuard, messengerRoutes);
-app.use('/api/ai',         protect, subscriptionGuard, aiRoutes);
-app.use('/api/settings',   protect, subscriptionGuard, settingsRoutes);
-app.use('/api/reports',    protect, subscriptionGuard, reportsRoutes);
+app.use('/api/leads',      rateLimitAdvanced, protect, subscriptionGuard, leadsRoutes);
+app.use('/api/contacts',   rateLimitAdvanced, protect, subscriptionGuard, contactsRoutes);
+app.use('/api/clients',    rateLimitAdvanced, protect, subscriptionGuard, clientsRoutes);
+app.use('/api/products',   rateLimitAdvanced, protect, subscriptionGuard, productsRoutes);
+app.use('/api/quotes',     rateLimitAdvanced, protect, subscriptionGuard, quotesRoutes);
+app.use('/api/invoices',   rateLimitAdvanced, protect, subscriptionGuard, invoicesRoutes);
+app.use('/api/payments',   rateLimitAdvanced, protect, subscriptionGuard, paymentsRoutes);
+app.use('/api/activities', rateLimitAdvanced, protect, subscriptionGuard, activitiesRoutes);
+app.use('/api/templates',  rateLimitAdvanced, protect, subscriptionGuard, templatesRoutes);
+app.use('/api/automation', rateLimitAdvanced, protect, subscriptionGuard, automationRoutes);
+app.use('/api/onboarding', rateLimitAdvanced, protect, subscriptionGuard, onboardingRoutes);
+app.use('/api/send',       rateLimitAdvanced, protect, subscriptionGuard, messengerRoutes);
+app.use('/api/ai',         rateLimitAdvanced, protect, subscriptionGuard, aiRoutes);
+app.use('/api/settings',   rateLimitAdvanced, protect, subscriptionGuard, settingsRoutes);
+app.use('/api/reports',    rateLimitAdvanced, protect, subscriptionGuard, reportsRoutes);
 app.use('/api/admin',      adminRoutes);
-app.use('/api/migrate',    protect, subscriptionGuard, migrateRoutes);
-app.use('/api/wa',         protect, subscriptionGuard, waRoutes);
+app.use('/api/migrate',    rateLimitAdvanced, protect, subscriptionGuard, migrateRoutes);
+app.use('/api/wa',         rateLimitAdvanced, protect, subscriptionGuard, waRoutes);
 
 // ── Resolve client path FIRST — before any route that uses it ─────────────
 // Try cwd-relative path first (Docker: /app/client), then __dirname-relative (local dev)

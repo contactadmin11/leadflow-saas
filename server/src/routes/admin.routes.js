@@ -201,7 +201,6 @@ router.get('/dashboard', async (req, res, next) => {
 // ── DEVICE MANAGEMENT (Admin) ────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════
 const Session      = require('../models/Session');
-const Subscription = require('../models/Subscription');
 
 // ── GET all active devices for a user ────────────────────────────────────
 router.get('/users/:id/devices', async (req, res, next) => {
@@ -410,6 +409,61 @@ router.post('/subscriptions/:userId/grant-lifetime', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── License device-fingerprint management ────────────────────────────────
+
+// GET bound devices for a license
+router.get('/licenses/:id/devices', async (req, res, next) => {
+  try {
+    const license = await License.findById(req.params.id).select('key clientName boundDevices maxDevices activeDevices');
+    if (!license) return res.status(404).json({ error: 'License not found' });
+    res.json({ boundDevices: license.boundDevices || [], maxDevices: license.maxDevices });
+  } catch (err) { next(err); }
+});
+
+// POST reset (clear) all bound devices for a license
+router.post('/licenses/:id/reset-bound-devices', async (req, res, next) => {
+  try {
+    const license = await License.findByIdAndUpdate(
+      req.params.id,
+      { $set: { boundDevices: [], activeDevices: 0 } },
+      { new: true }
+    );
+    if (!license) return res.status(404).json({ error: 'License not found' });
+    await audit({ action: 'ADMIN_LICENSE_DEVICES_RESET', resource: 'License', resourceId: license._id, req });
+    res.json({ success: true, license });
+  } catch (err) { next(err); }
+});
+
+// DELETE remove a specific bound device fingerprint
+router.delete('/licenses/:id/devices/:fingerprint', async (req, res, next) => {
+  try {
+    const license = await License.findByIdAndUpdate(
+      req.params.id,
+      { $pull: { boundDevices: req.params.fingerprint }, $inc: { activeDevices: -1 } },
+      { new: true }
+    );
+    if (!license) return res.status(404).json({ error: 'License not found' });
+    await audit({ action: 'ADMIN_LICENSE_DEVICE_REMOVED', resource: 'License', resourceId: license._id, details: { fingerprint: req.params.fingerprint }, req });
+    res.json({ success: true, license });
+  } catch (err) { next(err); }
+});
+
+// PUT update max devices for a license
+router.put('/licenses/:id/max-devices', async (req, res, next) => {
+  try {
+    const { maxDevices } = req.body;
+    if (maxDevices === undefined || maxDevices === null) return res.status(400).json({ error: 'maxDevices required' });
+    const license = await License.findByIdAndUpdate(
+      req.params.id,
+      { $set: { maxDevices: parseInt(maxDevices) || 1 } },
+      { new: true }
+    );
+    if (!license) return res.status(404).json({ error: 'License not found' });
+    res.json({ license });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
+
 
 

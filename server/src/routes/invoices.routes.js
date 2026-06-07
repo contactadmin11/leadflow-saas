@@ -1,6 +1,7 @@
 const express    = require('express');
 const Invoice    = require('../models/Invoice');
 const Settings   = require('../models/Settings');
+const Product    = require('../models/Product');
 const { protect }= require('../middleware/auth');
 const { calculateTotals } = require('../services/gst.service');
 const { generateInvoicePDF } = require('../services/pdf.service');
@@ -9,6 +10,27 @@ const router     = express.Router();
 
 router.use(protect);
 const q = (uid, extra = {}) => ({ userId: uid, deletedAt: null, ...extra });
+
+/**
+ * Validate that all items in the invoice exist in the user's product catalogue.
+ * Skips items that have a productId (properly linked).
+ * If catalogue enforcement is not strict, this just logs a warning.
+ */
+const validateItems = async (userId, items = []) => {
+  if (!items.length) return; // nothing to validate
+  const names = items.map(i => (i.name || '').trim()).filter(Boolean);
+  if (!names.length) return;
+  // Find matching products for this user
+  const products = await Product.find({ userId, deletedAt: null, name: { $in: names } }).lean();
+  const productNames = new Set(products.map(p => p.name.trim()));
+  const invalid = names.filter(n => !productNames.has(n));
+  if (invalid.length) {
+    throw Object.assign(
+      new Error(`The following items are not in your product catalogue: ${invalid.join(', ')}. Please add them in Products before invoicing.`),
+      { statusCode: 422 }
+    );
+  }
+};
 
 const nextInvNo = async (userId) => {
   const s = await Settings.findOneAndUpdate({ userId }, { $inc: { invCounter: 1 } }, { new: true, upsert: true });
@@ -43,6 +65,8 @@ router.post('/', async (req, res, next) => {
   try {
     const settings  = await Settings.findOne({ userId: req.user.id });
     const { items = [], buyerState, ...rest } = req.body;
+    // Enforce catalogue-only items
+    await validateItems(req.user.id, items);
     const totals    = calculateTotals(items, settings?.state, buyerState, settings?.gstEnabled !== false);
     const invoiceNo = await nextInvNo(req.user.id);
     const dueDate   = rest.dueDate || (() => { const d = new Date(); d.setDate(d.getDate() + (settings?.payTerms || 30)); return d; })();
@@ -56,6 +80,8 @@ router.put('/:id', async (req, res, next) => {
   try {
     const settings = await Settings.findOne({ userId: req.user.id });
     const { items = [], buyerState, ...rest } = req.body;
+    // Enforce catalogue-only items on update too
+    await validateItems(req.user.id, items);
     const totals = calculateTotals(items, settings?.state, buyerState, settings?.gstEnabled !== false);
     const update = { ...rest, items: totals.items, subtotal: totals.subtotal, cgst: totals.cgst, sgst: totals.sgst, igst: totals.igst, total: totals.total, buyerState };
     delete update._id; delete update.userId; delete update.invoiceNo;

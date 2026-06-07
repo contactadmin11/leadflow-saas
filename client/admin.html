@@ -162,6 +162,19 @@ button{font:inherit;font-weight:800;border:0;border-radius:10px;cursor:pointer}.
 
 <div id="toast" class="toast"></div>
 
+<!-- License Device Fingerprint Modal -->
+<div id="licDevModal" class="modal">
+  <div class="modal-box" style="width:min(92vw,520px)">
+    <h3 id="licDevModalTitle" style="margin-bottom:14px;color:#a5b4fc">Bound Devices</h3>
+    <div id="licDevList" style="max-height:320px;overflow-y:auto;margin-bottom:16px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="danger" onclick="resetAllLicDevices()">Reset All Devices</button>
+      <button class="muted-btn" onclick="closeLicDevModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+
 <script>
 // ─── State ────────────────────────────────────────────────────────────────────
 // SECURITY: Token stored in JS memory ONLY — invisible to DevTools Application tab
@@ -365,8 +378,8 @@ function row(k, i) {
         ? `<button class="orange btn-sm" data-id="${k._id}" onclick="openExtend(this.dataset.id)">Extend</button>
            <button class="danger btn-sm" data-id="${k._id}" onclick="act(this.dataset.id,'revoke')">Revoke</button>`
         : `<button class="green btn-sm" data-id="${k._id}" onclick="act(this.dataset.id,'reactivate')">Reactivate</button>`}
-      <button class="blue btn-sm" data-id="${k._id}" onclick="act(this.dataset.id,'reset-devices')" title="Reset active devices">↺ Devices (${k.activeDevices||0}/${k.maxUsers||1})</button>
-      <button class="orange btn-sm" onclick="changeLicenseMax('${k._id}', ${k.maxUsers||1})" title="Change Max Devices">Set Max Devices</button>
+      <button class="blue btn-sm" data-id="${k._id}" onclick="viewLicenseDevices(this.dataset.id,'${esc(k.key)}')">📱 Devices (${k.activeDevices||0}/${k.maxDevices||k.maxUsers||1})</button>
+      <button class="orange btn-sm" onclick="changeLicenseMax('${k._id}', ${k.maxDevices||k.maxUsers||1})">Set Limit</button>
       <button class="muted-btn btn-sm" data-id="${k._id}" onclick="act(this.dataset.id,'delete')">Delete</button>
     </div></td>
   </tr>`;
@@ -608,11 +621,10 @@ async function changeLicenseMax(licenseId, currentMax) {
   if (newMax === null || newMax === '') return;
   const num = parseInt(newMax);
   if (isNaN(num) || num < 1) return alert('Invalid number');
-  
   try {
-    await api(`/api/admin/licenses/${licenseId}/max-users`, {
-      method: 'POST',
-      body: JSON.stringify({ maxUsers: num })
+    await api(`/api/admin/licenses/${licenseId}/max-devices`, {
+      method: 'PUT',
+      body: JSON.stringify({ maxDevices: num })
     });
     toast('License max devices updated ✅');
     loadKeys();
@@ -620,6 +632,48 @@ async function changeLicenseMax(licenseId, currentMax) {
     toast(e.message, true);
   }
 }
+
+// ─── License Bound Devices Viewer ────────────────────────────────────────────
+let _licDevId = '';
+async function viewLicenseDevices(licenseId, keyLabel) {
+  _licDevId = licenseId;
+  document.getElementById('licDevModalTitle').textContent = 'Bound Devices — ' + keyLabel;
+  document.getElementById('licDevList').innerHTML = '<p style="color:#94a3b8">Loading…</p>';
+  document.getElementById('licDevModal').classList.add('show');
+  try {
+    const data = await api(`/api/admin/licenses/${licenseId}/devices`);
+    const devs = data.boundDevices || [];
+    if (!devs.length) {
+      document.getElementById('licDevList').innerHTML = '<p style="color:#94a3b8;text-align:center">No bound devices</p>';
+      return;
+    }
+    document.getElementById('licDevList').innerHTML = devs.map((fp, i) =>
+      `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #2d335f">
+        <span style="font-family:Consolas;font-size:12px;flex:1;word-break:break-all;color:#a5b4fc">${esc(fp)}</span>
+        <button class="danger btn-sm" onclick="removeLicDevice('${esc(licenseId)}','${esc(fp)}')">Remove</button>
+      </div>`
+    ).join('');
+  } catch(e) { document.getElementById('licDevList').innerHTML = `<p style="color:#fca5a5">${esc(e.message)}</p>`; }
+}
+
+async function resetAllLicDevices() {
+  if (!confirm('Reset all bound devices for this license? Client will need to re-activate on their device.')) return;
+  try {
+    await api(`/api/admin/licenses/${_licDevId}/reset-bound-devices`, { method:'POST', body:'{}' });
+    toast('All devices reset ✅'); closeLicDevModal(); loadKeys();
+  } catch(e) { toast(e.message, true); }
+}
+
+async function removeLicDevice(licenseId, fingerprint) {
+  if (!confirm('Remove this device fingerprint?')) return;
+  try {
+    await api(`/api/admin/licenses/${licenseId}/devices/${encodeURIComponent(fingerprint)}`, { method:'DELETE' });
+    toast('Device removed ✅'); viewLicenseDevices(licenseId, '');
+    loadKeys();
+  } catch(e) { toast(e.message, true); }
+}
+
+function closeLicDevModal() { document.getElementById('licDevModal').classList.remove('show'); _licDevId = ''; }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 function toast(msg, err) {

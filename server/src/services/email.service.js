@@ -4,6 +4,7 @@ const logger       = require('../config/logger');
 
 /**
  * Create a Nodemailer transporter from decrypted user settings.
+ * Uses Gmail with App Password (SMTP). OAuth2 can be added later via env vars.
  */
 const createTransporter = (settings) => {
   const gmailUser = decrypt(settings.gmailUserEnc);
@@ -16,7 +17,11 @@ const createTransporter = (settings) => {
   return {
     transporter: nodemailer.createTransport({
       service: 'gmail',
-      auth: { user: gmailUser, pass: gmailPass }
+      auth: { user: gmailUser, pass: gmailPass },
+      // Pool connections for better performance under load
+      pool: true,
+      maxConnections: 3,
+      maxMessages: 100
     }),
     fromEmail: gmailUser,
     fromName:  settings.gmailFromName || settings.bizName || 'LeadFlow'
@@ -24,9 +29,32 @@ const createTransporter = (settings) => {
 };
 
 /**
+ * Exponential back-off retry helper.
+ * @param {Function} fn - async function to retry
+ * @param {number}   maxRetries
+ * @param {number}   baseDelayMs
+ */
+const withRetry = async (fn, maxRetries = 3, baseDelayMs = 1000) => {
+  let lastErr;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt < maxRetries) {
+        const delay = baseDelayMs * Math.pow(2, attempt - 1);
+        logger.warn(`[Email] Attempt ${attempt} failed (${err.message}). Retrying in ${delay}ms…`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastErr;
+};
+
+/**
  * Send an email with optional PDF attachment.
  * This is the MAIN send function — preserves all original behavior.
- * 
+ *
  * @param {object} settings   - User settings from DB (with encrypted fields)
  * @param {string} toEmail    - Recipient email
  * @param {string} toName     - Recipient name
@@ -65,7 +93,9 @@ const sendEmail = async (settings, toEmail, toName, subject, message, pdfBuffer,
     }] : []
   };
 
-  await transporter.sendMail(mailOptions);
+  // Retry up to 3 times with exponential back-off
+  await withRetry(() => transporter.sendMail(mailOptions), 3, 800);
+
   logger.info(`✅ Email sent → ${toEmail}${pdfBuffer ? ' (with PDF)' : ''}`);
   return { success: true, method: pdfBuffer ? 'email_with_pdf' : 'email_only' };
 };
