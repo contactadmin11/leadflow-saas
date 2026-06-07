@@ -4616,9 +4616,9 @@ function openSendDocModal(type,id){
   const biz=settings.bizName||'Us', amt=fC(doc.total||0);
   let msg='';
   if(isQ){
-    msg=`Hello ${name||'Sir/Madam'},\n\nPlease find the Quotation *${doc.quoteNo}* from ${biz} attached.\n\n📋 *Details:*\n• Quote No: ${doc.quoteNo}\n• Valid Till: ${fD(doc.validTill)}\n• Amount: *${amt}*\n• Items: ${(doc.items||[]).map(i=>i.name).join(', ')}\n\nPlease review and confirm at your earliest.\n\nThanks & Regards,\n${biz}`;
+    msg=`Hello ${name||'Sir/Madam'},\n\nPlease find the quotation *${doc.quoteNo}* from ${biz}.\n\n*Details:*\n- Quote No: ${doc.quoteNo}\n- Date: ${fD(doc.createdAt)}\n- Valid Till: ${fD(doc.validTill)}\n- Amount: *${amt}*\n\nQuotation PDF has been sent to your email. \nKindly check your email for the PDF.\n\nPlease review and confirm at your earliest. Thanks & Regards,\n${biz}`;
   } else {
-    msg=`Hello ${name||'Sir/Madam'},\n\nPlease find the Invoice *${doc.invoiceNo}* from ${biz} attached.\n\n🧾 *Details:*\n• Invoice No: ${doc.invoiceNo}\n• Date: ${fD(doc.invoiceDate)}\n• Due: ${fD(doc.dueDate)}\n• Amount Due: *${amt}*${settings.upi?'\n💳 UPI: '+settings.upi:''}\n\nKindly arrange payment by the due date.\n\nThanks & Regards,\n${biz}`;
+    msg=`Hello ${name||'Sir/Madam'},\n\nPlease find the invoice *${doc.invoiceNo}* from ${biz}.\n\n*Details:*\n- Invoice No: ${doc.invoiceNo}\n- Date: ${fD(doc.invoiceDate)}\n- Due Date: ${fD(doc.dueDate)}\n- Amount Due: *${amt}*${settings.upi?'\n💳 UPI: '+settings.upi:''}\n\nInvoice PDF has been sent to your email. \nKindly check your email for the PDF.\n\nKindly arrange payment by the due date. Thanks & Regards,\n${biz}`;
   }
   document.getElementById('sdMessage').value=msg;
   // Generate PDF instantly

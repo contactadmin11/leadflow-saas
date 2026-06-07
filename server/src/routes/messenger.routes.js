@@ -25,24 +25,13 @@ router.post('/whatsapp', async (req, res, next) => {
     const { phone, message, docType, docId } = req.body;
     if (!phone) return res.status(400).json({ error: 'Phone required' });
 
-    let pdfBuffer = null;
-    let pdfName   = null;
-    let downloadLink = null;
-
     if (docType && docId) {
-      const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
-      pdfBuffer = buffer;
-      pdfName   = filename;
-      downloadLink = `${process.env.CLIENT_URL || ('https://' + req.get('host'))}/api/public/${docType}/${docId}/pdf`;
       if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
       if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
     }
 
-    // Rule 5: Append public download link to WA message, do not send PDF file binary directly
-    const finalMessage = downloadLink ? `${message}\n\n📄 Download PDF: ${downloadLink}` : message;
-    
-    // We pass null for pdfBuffer to skip binary attachment for WA, relying entirely on the link
-    const result = await sendMessage(req.user.id, phone, finalMessage, null, null);
+    // WhatsApp gets only the text message (no PDF, no download links)
+    const result = await sendMessage(req.user.id, phone, message, null, null);
     if (!result.success) return res.status(400).json(result);
 
     await audit({ userId: req.user.id, action: 'WA_SENT', resource: docType || 'message', resourceId: docId, details: { phone }, req });
@@ -92,20 +81,17 @@ router.post('/both', async (req, res, next) => {
 
     let pdfBuffer = null;
     let pdfName   = null;
-    let downloadLink = null;
 
     if (docType && docId) {
       const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
       pdfBuffer = buffer;
       pdfName   = filename;
-      downloadLink = `${process.env.CLIENT_URL || ('https://' + req.get('host'))}/api/public/${docType}/${docId}/pdf`;
       if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
       if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
     }
 
     if (phone) {
-      const waMessage = downloadLink ? `${message}\n\n📄 Download PDF: ${downloadLink}` : message;
-      results.whatsapp = await sendMessage(req.user.id, phone, waMessage, null, null);
+      results.whatsapp = await sendMessage(req.user.id, phone, message, null, null);
     }
     if (toEmail && settings) {
       results.email = await sendEmail(
