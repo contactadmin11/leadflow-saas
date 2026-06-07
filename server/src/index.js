@@ -32,6 +32,7 @@ const settingsRoutes  = require('./routes/settings.routes');
 const reportsRoutes   = require('./routes/reports.routes');
 const adminRoutes     = require('./routes/admin.routes');
 const publicRoutes    = require('./routes/public.routes');
+const syncRoutes      = require('./routes/sync.routes');
 const migrateRoutes   = require('./routes/migrate.routes');
 const onboardingRoutes = require('./routes/onboarding.routes');
 const waRoutes        = require('./routes/wa.routes');
@@ -123,6 +124,7 @@ app.use('/api/ai',         rateLimitAdvanced, protect, subscriptionGuard, aiRout
 app.use('/api/settings',   rateLimitAdvanced, protect, subscriptionGuard, settingsRoutes);
 app.use('/api/reports',    rateLimitAdvanced, protect, subscriptionGuard, reportsRoutes);
 app.use('/api/admin',      adminRoutes);
+app.use('/api/sync',       rateLimitAdvanced, protect, subscriptionGuard, syncRoutes);
 app.use('/api/migrate',    rateLimitAdvanced, protect, subscriptionGuard, migrateRoutes);
 app.use('/api/wa',         rateLimitAdvanced, protect, subscriptionGuard, waRoutes);
 

@@ -186,7 +186,22 @@
         const prevItem = prevMap[id];
         if (!prevItem) {
           // New item
-          if (ops.create) promises.push(ops.create(item).catch(e => console.warn('[Bridge] create failed:', e.message)));
+          if (ops.create) {
+            promises.push(
+              ops.create(item)
+                .then(res => {
+                  // The server assigns the real MongoDB ObjectId.
+                  // E.g., res might be { success: true, invoice: { _id: "...", ... } }
+                  // Find the nested object that has the _id
+                  const newObj = Object.values(res).find(v => v && v._id);
+                  if (newObj && newObj._id) {
+                    item.id = newObj._id; // Update local memory immediately
+                    item._id = newObj._id;
+                  }
+                })
+                .catch(e => console.warn('[Bridge] create failed:', e.message))
+            );
+          }
         } else if (JSON.stringify(item) !== JSON.stringify(prevItem)) {
           // Changed item
           if (ops.update && id) promises.push(ops.update(id, item).catch(e => console.warn('[Bridge] update failed:', e.message)));
@@ -203,6 +218,11 @@
       }
 
       await Promise.allSettled(promises);
+      
+      // We must write the updated items (with real IDs) back to localStorage 
+      // so the UI has the real IDs immediately for things like "Send WhatsApp".
+      localStorage.setItem(key, JSON.stringify(currentItems));
+      
       _lastSynced[key] = JSON.parse(JSON.stringify(currentItems));
     } catch(e) {
       console.warn('[Bridge] smartSync failed for', key, ':', e.message);
