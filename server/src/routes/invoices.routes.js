@@ -1,4 +1,5 @@
 const express    = require('express');
+const mongoose   = require('mongoose');
 const Invoice    = require('../models/Invoice');
 const Settings   = require('../models/Settings');
 const Product    = require('../models/Product');
@@ -101,6 +102,12 @@ router.delete('/:id', async (req, res, next) => {
 // GET invoice PDF
 router.get('/:id/pdf', async (req, res, next) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ 
+        error: 'Invalid ID format',
+        received: req.params.id
+      });
+    }
     const invoice  = await Invoice.findOne(q(req.user.id, { _id: req.params.id })).lean();
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
     const settings = await Settings.findOne({ userId: req.user.id }).lean();
@@ -113,6 +120,12 @@ router.get('/:id/pdf', async (req, res, next) => {
 // POST generate PDF as base64 (for messenger)
 router.post('/:id/pdf-base64', async (req, res, next) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ 
+        error: 'Invalid ID format',
+        received: req.params.id
+      });
+    }
     const invoice  = await Invoice.findOne(q(req.user.id, { _id: req.params.id })).lean();
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
     const settings = await Settings.findOne({ userId: req.user.id }).lean();

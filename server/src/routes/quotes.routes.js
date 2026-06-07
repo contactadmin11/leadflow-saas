@@ -1,4 +1,5 @@
 const express    = require('express');
+const mongoose   = require('mongoose');
 const Quote      = require('../models/Quote');
 const Settings   = require('../models/Settings');
 const { protect }= require('../middleware/auth');
@@ -67,6 +68,12 @@ router.delete('/:id', async (req, res, next) => {
 // GET quote PDF
 router.get('/:id/pdf', async (req, res, next) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ 
+        error: 'Invalid ID format',
+        received: req.params.id
+      });
+    }
     const quote    = await Quote.findOne(q(req.user.id, { _id: req.params.id })).lean();
     if (!quote) return res.status(404).json({ error: 'Quote not found' });
     const settings = await Settings.findOne({ userId: req.user.id }).lean();

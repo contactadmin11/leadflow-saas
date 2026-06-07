@@ -46,27 +46,61 @@ const API = {
   // ── Base URL (read-only) ───────────────────────────────────────────────────
   get baseUrl() { return API_BASE; },
 
-  // ── Token management (memory only) ────────────────────────────────────────
+  // ── Token management (localStorage with 7 days expiry) ───────────────────────
   setAccessToken(token) {
     _accessToken = token;
+    if (token) {
+      localStorage.setItem('token', token);
+      localStorage.setItem('tokenExpiry', String(Date.now() + (7 * 24 * 60 * 60 * 1000)));
+    } else {
+      localStorage.removeItem('token');
+      localStorage.removeItem('tokenExpiry');
+    }
   },
 
   clearSession() {
     _accessToken = null;
     _currentUser = null;
+    localStorage.removeItem('token');
+    localStorage.removeItem('tokenExpiry');
+    localStorage.removeItem('currentUser');
     // Note: httpOnly refresh cookie is cleared by server on logout
   },
 
   getUser() {
+    if (!_currentUser) {
+      const userStr = localStorage.getItem('currentUser');
+      if (userStr) {
+        try {
+          _currentUser = JSON.parse(userStr);
+        } catch (e) {}
+      }
+    }
     return _currentUser;
   },
 
   setUser(user) {
     _currentUser = user;
+    if (user) {
+      localStorage.setItem('currentUser', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('currentUser');
+    }
   },
 
   isLoggedIn() {
-    return !!_accessToken && !!_currentUser;
+    const token = localStorage.getItem('token');
+    const expiry = localStorage.getItem('tokenExpiry');
+    if (!token || !expiry || Date.now() > parseInt(expiry)) {
+      if (token || expiry) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('tokenExpiry');
+        localStorage.removeItem('currentUser');
+      }
+      return false;
+    }
+    _accessToken = token; // Sync memory
+    return true;
   },
 
   // ── Core request method ────────────────────────────────────────────────────
@@ -146,8 +180,23 @@ const API = {
   },
 
   // ── Auto-restore session on page load ─────────────────────────────────────
-  // Called once on startup — uses httpOnly cookie to get a fresh access token
+  // Reads token and user from localStorage if present and valid.
+  // Fallbacks to /auth/refresh if not present or if we need to sync.
   async restoreSession() {
+    const token = localStorage.getItem('token');
+    const expiry = localStorage.getItem('tokenExpiry');
+    const userStr = localStorage.getItem('currentUser');
+    
+    if (token && expiry && Date.now() <= parseInt(expiry)) {
+      _accessToken = token;
+      if (userStr) {
+        try {
+          _currentUser = JSON.parse(userStr);
+        } catch (e) {}
+      }
+      return true;
+    }
+
     try {
       const resp = await fetch(`${API_BASE}/auth/refresh`, {
         method:      'POST',
@@ -160,12 +209,17 @@ const API = {
         credentials: 'include',
         body:        JSON.stringify({})
       });
-      if (!resp.ok) return false;
+      if (!resp.ok) {
+        this.clearSession();
+        return false;
+      }
       const { accessToken, user } = await resp.json();
       this.setAccessToken(accessToken);
       if (user) this.setUser(user);
       return true;
-    } catch { return false; }
+    } catch {
+      return this.isLoggedIn();
+    }
   },
 
   // ── Convenience methods ───────────────────────────────────────────────────

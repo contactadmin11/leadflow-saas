@@ -11,6 +11,8 @@ const router = express.Router();
  * Publicly accessible route to download an invoice or quote PDF.
  * This is used for WhatsApp links where attachments are not possible.
  */
+const mongoose = require('mongoose');
+
 /**
  * GET /api/public/invoice/:id/pdf
  * Strictly requested URL format for WhatsApp linking
@@ -18,6 +20,15 @@ const router = express.Router();
 router.get('/invoice/:id/pdf', async (req, res, next) => {
   try {
     const { id } = req.params;
+    
+    // Validate ID format first
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ 
+        error: 'Invalid ID format',
+        received: id
+      });
+    }
+
     const invoice = await Invoice.findOne({ _id: id, deletedAt: null }).lean();
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
     
@@ -40,6 +51,15 @@ router.get('/invoice/:id/pdf', async (req, res, next) => {
 router.get('/quote/:id/pdf', async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // Validate ID format first
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ 
+        error: 'Invalid ID format',
+        received: id
+      });
+    }
+
     const quote = await Quote.findOne({ _id: id, deletedAt: null }).lean();
     if (!quote) return res.status(404).json({ error: 'Quote not found' });
     

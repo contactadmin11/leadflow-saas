@@ -242,6 +242,25 @@ window._sendViaLocalServer = async function(phone, message, type, id, toEmail = 
   }
 };
 
+// ── Same-browser WhatsApp redirect override ─────────────────────────────────
+window._sendViaSameBrowserWA = async function(phone, message, type, id) {
+  // Resolve local ID to MongoDB ObjectId
+  const resolvedId = await _resolveDocId(type, id);
+  console.log('Invoice ID being used:', resolvedId);
+
+  const baseUrl = window.location.origin;
+  const link = `${baseUrl}/api/public/${type}/${resolvedId}/pdf`;
+  const waMsg = `${message}\n\n📄 Download PDF: ${link}`;
+  const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(waMsg)}`;
+
+  // Use the same window name ('leadflow_whatsapp_tab') to reuse the tab
+  window.open(waUrl, 'leadflow_whatsapp_tab');
+
+  if (typeof toast === 'function') {
+    toast('WhatsApp Web opened with PDF link inserted!', 'info', 4000);
+  }
+};
+
 window._sendEmailWithPDF = async function(email, name, subject, message, type, id) {
   if (!email) {
     if (typeof toast === 'function') toast('❌ No email address found for this contact.', 'error', 6000);
