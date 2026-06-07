@@ -4918,7 +4918,7 @@ async function _sendViaLocalServer(phone,message,type,id,toEmail='',toName='',su
       if(statusEl)statusEl.innerHTML='<span style="color:#f59e0b">⏳ Sending PDF to WhatsApp…</span>';
       
       if(typeof API!=='undefined' && API.isLoggedIn()){
-        const data = await API.sendWA({ phone, message, docType: type, docId: id, pdfBase64: _sdPdfResult.base64, pdfName: _sdPdfResult.fname });
+        const data = await API.sendWA({ phone, message, docType: type, docId: id });
         if(statusEl)statusEl.innerHTML='<span style="color:#10b981;font-weight:700">✅ PDF sent via WhatsApp!</span>';
         toast(`✅ PDF sent to WhatsApp!`,'success',5000);
       } else {
@@ -4939,12 +4939,17 @@ async function _sendViaLocalServer(phone,message,type,id,toEmail='',toName='',su
 
 // ── SAME-BROWSER WA fallback ──
 async function _sendViaSameBrowserWA(phone,message,type,id){
-  if(!_sdPdfResult)_sdPdfResult=await buildDocPDF(type,id);
-  _autoDownloadPDF();
-  const waUrl=`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
+  const baseUrl = window.location.origin;
+  const link = `${baseUrl}/api/public/document/${type}/${id}`;
+  const waMsg = `${message}\n\n📄 Download PDF: ${link}`;
+
+  const waUrl=`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(waMsg)}`;
   if(_waTab&&!_waTab.closed){_waTab.location.href=waUrl;_waTab.focus();}
   else{_waTab=window.open(waUrl,'leadflow_whatsapp_tab');}
-  _showWAGuide(_sdPdfResult.fname);
+  
+  // No need to autoDownloadPDF or showWAGuide since the user can just click the link!
+  // But we'll keep a simple toast just in case.
+  toast('WhatsApp Web opened with PDF link inserted!','info', 4000);
 }
 
 function openWATab(){
@@ -5031,7 +5036,7 @@ async function _sendEmailWithPDF(email,name,subject,message,type,id){
     if(typeof API!=='undefined'&&API.isLoggedIn()){
       const result=await API.sendEmail({
         toEmail:email,toName:name||email,subject,message,
-        docType:type,docId:id, pdfBase64: _sdPdfResult.base64, pdfName: _sdPdfResult.fname
+        docType:type,docId:id
       });
       if(result&&result.success){
         toast(`✅ Email with PDF sent to ${email}!`,'success',5000);

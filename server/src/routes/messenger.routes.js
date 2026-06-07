@@ -27,20 +27,22 @@ router.post('/whatsapp', async (req, res, next) => {
 
     let pdfBuffer = null;
     let pdfName   = null;
+    let downloadLink = null;
 
-    if (req.body.pdfBase64) {
-      const b64Data = req.body.pdfBase64.replace(/^data:application\/pdf;base64,/, '');
-      pdfBuffer = Buffer.from(b64Data, 'base64');
-      pdfName = req.body.pdfName || 'document.pdf';
-    } else if (docType && docId) {
+    if (docType && docId) {
       const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
       pdfBuffer = buffer;
       pdfName   = filename;
+      downloadLink = `${process.env.CLIENT_URL || ('https://' + req.get('host'))}/api/public/document/${docType}/${docId}`;
       if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
       if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
     }
 
-    const result = await sendMessage(req.user.id, phone, message, pdfBuffer, pdfName);
+    // Rule 5: Append public download link to WA message, do not send PDF file binary directly
+    const finalMessage = downloadLink ? `${message}\n\n📄 Download PDF: ${downloadLink}` : message;
+    
+    // We pass null for pdfBuffer to skip binary attachment for WA, relying entirely on the link
+    const result = await sendMessage(req.user.id, phone, finalMessage, null, null);
     if (!result.success) return res.status(400).json(result);
 
     await audit({ userId: req.user.id, action: 'WA_SENT', resource: docType || 'message', resourceId: docId, details: { phone }, req });
@@ -64,11 +66,7 @@ router.post('/email', async (req, res, next) => {
     let pdfBuffer = null;
     let pdfName   = null;
 
-    if (req.body.pdfBase64) {
-      const b64Data = req.body.pdfBase64.replace(/^data:application\/pdf;base64,/, '');
-      pdfBuffer = Buffer.from(b64Data, 'base64');
-      pdfName = req.body.pdfName || 'document.pdf';
-    } else if (docType && docId) {
+    if (docType && docId) {
       const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
       pdfBuffer = buffer;
       pdfName   = filename;
@@ -94,21 +92,20 @@ router.post('/both', async (req, res, next) => {
 
     let pdfBuffer = null;
     let pdfName   = null;
+    let downloadLink = null;
 
-    if (req.body.pdfBase64) {
-      const b64Data = req.body.pdfBase64.replace(/^data:application\/pdf;base64,/, '');
-      pdfBuffer = Buffer.from(b64Data, 'base64');
-      pdfName = req.body.pdfName || 'document.pdf';
-    } else if (docType && docId) {
+    if (docType && docId) {
       const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
       pdfBuffer = buffer;
       pdfName   = filename;
+      downloadLink = `${process.env.CLIENT_URL || ('https://' + req.get('host'))}/api/public/document/${docType}/${docId}`;
       if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
       if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
     }
 
     if (phone) {
-      results.whatsapp = await sendMessage(req.user.id, phone, message, pdfBuffer, pdfName);
+      const waMessage = downloadLink ? `${message}\n\n📄 Download PDF: ${downloadLink}` : message;
+      results.whatsapp = await sendMessage(req.user.id, phone, waMessage, null, null);
     }
     if (toEmail && settings) {
       results.email = await sendEmail(

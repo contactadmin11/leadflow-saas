@@ -31,6 +31,7 @@ const aiRoutes        = require('./routes/ai.routes');
 const settingsRoutes  = require('./routes/settings.routes');
 const reportsRoutes   = require('./routes/reports.routes');
 const adminRoutes     = require('./routes/admin.routes');
+const publicRoutes    = require('./routes/public.routes');
 const migrateRoutes   = require('./routes/migrate.routes');
 const onboardingRoutes = require('./routes/onboarding.routes');
 const waRoutes        = require('./routes/wa.routes');
@@ -105,6 +106,7 @@ app.use('/api/auth',         authRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 
 // All routes below require: (1) valid JWT, (2) active subscription
+app.use('/api/public',     publicRoutes);
 app.use('/api/leads',      rateLimitAdvanced, protect, subscriptionGuard, leadsRoutes);
 app.use('/api/contacts',   rateLimitAdvanced, protect, subscriptionGuard, contactsRoutes);
 app.use('/api/clients',    rateLimitAdvanced, protect, subscriptionGuard, clientsRoutes);
