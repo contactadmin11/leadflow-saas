@@ -33,7 +33,7 @@ router.post('/whatsapp', async (req, res, next) => {
       const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
       pdfBuffer = buffer;
       pdfName   = filename;
-      downloadLink = `${process.env.CLIENT_URL || ('https://' + req.get('host'))}/api/public/document/${docType}/${docId}`;
+      downloadLink = `${process.env.CLIENT_URL || ('https://' + req.get('host'))}/api/public/${docType}/${docId}/pdf`;
       if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
       if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
     }
@@ -98,7 +98,7 @@ router.post('/both', async (req, res, next) => {
       const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
       pdfBuffer = buffer;
       pdfName   = filename;
-      downloadLink = `${process.env.CLIENT_URL || ('https://' + req.get('host'))}/api/public/document/${docType}/${docId}`;
+      downloadLink = `${process.env.CLIENT_URL || ('https://' + req.get('host'))}/api/public/${docType}/${docId}/pdf`;
       if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
       if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
     }
