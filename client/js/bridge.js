@@ -425,21 +425,31 @@
         id: item.id || item._id
       }));
 
-      // Write data to localStorage (original app reads from LS on init)
-      const LS_RAW = window._origLS || {
-        set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+      // Safe merge list function: merges database items with local items,
+      // keeping any local items that haven't been synced to the database yet.
+      const mergeLists = (localKey, dbList) => {
+        const local = getLocalArr(localKey);
+        const merged = [...dbList];
+        const dbIds = new Set(dbList.map(item => String(item.id || item._id)));
+        for (const localItem of local) {
+          const id = localItem.id || localItem._id;
+          if (id && !dbIds.has(String(id))) {
+            merged.push(localItem);
+          }
+        }
+        return merged;
       };
 
-      const leads      = mapId(extract(leadsData,     'leads'));
-      const contacts   = mapId(extract(contactsData,  'contacts'));
-      const clients    = mapId(extract(clientsData,   'clients'));
-      const products   = mapId(extract(productsData,  'products'));
-      const quotes     = mapId(extract(quotesData,    'quotes'));
-      const invoices   = mapId(extract(invoicesData,  'invoices'));
-      const payments   = mapId(extract(paymentsData,  'payments'));
-      const activities = mapId(extract(activitiesData,'activities'));
-      const templates  = mapId(extract(templatesData, 'templates'));
-      const rules      = mapId(extract(rulesData,     'rules'));
+      const leads      = mergeLists('lf2_leads',      mapId(extract(leadsData,     'leads')));
+      const contacts   = mergeLists('lf2_contacts',   mapId(extract(contactsData,  'contacts')));
+      const clients    = mergeLists('lf2_clients',    mapId(extract(clientsData,   'clients')));
+      const products   = mergeLists('lf2_products',   mapId(extract(productsData,  'products')));
+      const quotes     = mergeLists('lf2_quotes',     mapId(extract(quotesData,    'quotes')));
+      const invoices   = mergeLists('lf2_invoices',   mapId(extract(invoicesData,  'invoices')));
+      const payments   = mergeLists('lf2_payments',   mapId(extract(paymentsData,  'payments')));
+      const activities = mergeLists('lf2_activities', mapId(extract(activitiesData,'activities')));
+      const templates  = mergeLists('lf2_templates',  mapId(extract(templatesData, 'templates')));
+      const rules      = mergeLists('lf2_rules',      mapId(extract(rulesData,     'rules')));
       const settings   = extractObj(settingsData,     'settings');
 
       localStorage.setItem('lf2_leads',      JSON.stringify(leads));
