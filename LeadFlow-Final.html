@@ -3986,10 +3986,10 @@ function msgSendNext(){
   if(msgChannel==='whatsapp'||msgChannel==='both'){
     if(c.phone){
       const ph=c.phone.replace(/\D/g,'');
-      const waURL='https://wa.me/'+ph+'?text='+encodeURIComponent(rendered);
+      const waURL='https://web.whatsapp.com/send?phone='+ph+'&text='+encodeURIComponent(rendered);
       if(dry){msgLogLine('  ✅ [DRY RUN] WA → '+c.phone,'lg-ok');waOk=true;}
       else{
-        try{window.open(waURL,'_blank','noopener');waOk=true;msgLogLine('  💬 WhatsApp tab opened → '+c.phone,'lg-ok');}
+        try{window.open(waURL,'whatsapp_web_tab');waOk=true;msgLogLine('  💬 WhatsApp tab opened → '+c.phone,'lg-ok');}
         catch(err){msgLogLine('  ❌ WA open failed: '+err.message,'lg-er');}
       }
     }else{
@@ -4901,12 +4901,12 @@ async function _sendViaSameBrowserWA(phone,message,type,id){
   _autoDownloadPDF();
   const waUrl=`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
   if(_waTab&&!_waTab.closed){_waTab.location.href=waUrl;_waTab.focus();}
-  else{_waTab=window.open(waUrl,'leadflow_whatsapp_tab');}
+  else{_waTab=window.open(waUrl,'whatsapp_web_tab');}
   _showWAGuide(_sdPdfResult.fname);
 }
 
 function openWATab(){
-  _waTab=window.open('https://web.whatsapp.com','leadflow_whatsapp_tab');
+  _waTab=window.open('https://web.whatsapp.com','whatsapp_web_tab');
   if(_waTab)_waTab.focus();
 }
 let _waTab=null;

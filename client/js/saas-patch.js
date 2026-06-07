@@ -248,10 +248,10 @@ window._sendViaSameBrowserWA = async function(phone, message, type, id) {
   const resolvedId = await _resolveDocId(type, id);
   console.log('Invoice ID being used:', resolvedId);
 
-  const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  const waUrl = `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
 
-  // Use the same window name ('leadflow_whatsapp_tab') to reuse the tab
-  window.open(waUrl, 'leadflow_whatsapp_tab');
+  // Use the same window name ('whatsapp_web_tab') to reuse the tab
+  window.open(waUrl, 'whatsapp_web_tab');
 
   if (typeof toast === 'function') {
     toast('WhatsApp Web opened with message inserted!', 'info', 4000);

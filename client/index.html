@@ -4029,10 +4029,10 @@ function msgSendNext(){
   if(msgChannel==='whatsapp'||msgChannel==='both'){
     if(c.phone){
       const ph=c.phone.replace(/\D/g,'');
-      const waURL='https://wa.me/'+ph+'?text='+encodeURIComponent(rendered);
+      const waURL='https://web.whatsapp.com/send?phone='+ph+'&text='+encodeURIComponent(rendered);
       if(dry){msgLogLine('  ✅ [DRY RUN] WA → '+c.phone,'lg-ok');waOk=true;}
       else{
-        try{window.open(waURL,'_blank','noopener');waOk=true;msgLogLine('  💬 WhatsApp tab opened → '+c.phone,'lg-ok');}
+        try{window.open(waURL,'whatsapp_web_tab');waOk=true;msgLogLine('  💬 WhatsApp tab opened → '+c.phone,'lg-ok');}
         catch(err){msgLogLine('  ❌ WA open failed: '+err.message,'lg-er');}
       }
     }else{
@@ -4942,16 +4942,16 @@ async function _sendViaSameBrowserWA(phone,message,type,id){
   const link = `${baseUrl}/api/public/${type}/${id}/pdf`;
   const waMsg = `${message}\n\n📄 Download PDF: ${link}`;
 
-  const waUrl=`https://wa.me/${phone}?text=${encodeURIComponent(waMsg)}`;
+  const waUrl=`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(waMsg)}`;
   
   // Rely on the browser's native window targeting to reuse the tab
-  window.open(waUrl, 'whatsapp_window');
+  window.open(waUrl, 'whatsapp_web_tab');
   
   toast('WhatsApp Web opened with PDF link inserted!','info', 4000);
 }
 
 function openWATab(){
-  _waTab=window.open('https://web.whatsapp.com','leadflow_whatsapp_tab');
+  _waTab=window.open('https://web.whatsapp.com','whatsapp_web_tab');
   if(_waTab)_waTab.focus();
 }
 let _waTab=null;
