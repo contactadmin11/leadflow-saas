@@ -4900,7 +4900,8 @@ async function _sendViaSameBrowserWA(phone,message,type,id){
   if(!_sdPdfResult)_sdPdfResult=await buildDocPDF(type,id);
   _autoDownloadPDF();
   const waUrl=`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
-  window.open(waUrl, 'whatsapp_web_tab');
+  if(_waTab&&!_waTab.closed){_waTab.location.href=waUrl;_waTab.focus();}
+  else{_waTab=window.open(waUrl,'whatsapp_web_tab');}
   _showWAGuide(_sdPdfResult.fname);
 }
 

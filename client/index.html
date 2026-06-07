@@ -4938,15 +4938,16 @@ async function _sendViaLocalServer(phone,message,type,id,toEmail='',toName='',su
 
 // ── SAME-BROWSER WA fallback ──
 async function _sendViaSameBrowserWA(phone,message,type,id){
-  if(window._sendViaSameBrowserWA && window._sendViaSameBrowserWA !== _sendViaSameBrowserWA){
-    return await window._sendViaSameBrowserWA(phone,message,type,id);
-  }
-  const waUrl=`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
+  const baseUrl = window.location.origin;
+  const link = `${baseUrl}/api/public/${type}/${id}/pdf`;
+  const waMsg = `${message}\n\n📄 Download PDF: ${link}`;
+
+  const waUrl=`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(waMsg)}`;
   
   // Rely on the browser's native window targeting to reuse the tab
   window.open(waUrl, 'whatsapp_web_tab');
   
-  toast('WhatsApp Web opened with message inserted!','info', 4000);
+  toast('WhatsApp Web opened with PDF link inserted!','info', 4000);
 }
 
 function openWATab(){
