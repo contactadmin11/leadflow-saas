@@ -4608,6 +4608,9 @@ function openSendDocModal(type,id){
     if(doc.clientId.startsWith('C:')){const c=clients.find(x=>x.id===doc.clientId.slice(2));if(c){name=c.company||c.name;phone=c.phone||'';email=c.email||'';}}
     else if(doc.clientId.startsWith('L:')){const l=leads.find(x=>x.id===doc.clientId.slice(2));if(l){name=l.company||l.name;phone=l.phone||'';email=l.email||'';}}
   }
+  if(!phone && doc.clientPhone) phone = doc.clientPhone;
+  if(!email && doc.clientEmail) email = doc.clientEmail;
+  if(!name && doc.clientName) name = doc.clientName;
   phone=phone.replace(/[\s\-\+\(\)]/g,'');
   if(phone.length===10)phone='91'+phone;
   document.getElementById('sdRecipName').value=name;
@@ -5025,9 +5028,13 @@ async function _sendEmailResend(email,name,subject,message,type,id){
 }
 async function _sendEmailWithPDF(email,name,subject,message,type,id){
   if(!email){toast('Email address required','warning');return;}
-  // Basic email format validation
+  const trimmedEmail = email.trim();
   const emailRegex=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if(!emailRegex.test(email)){toast('Invalid email format: '+email,'warning');return;}
+  const emails = trimmedEmail.split(/[\s,;]+/).filter(Boolean);
+  if (emails.length === 0 || !emails.every(e => emailRegex.test(e))) {
+    toast('Invalid email format: '+email,'warning');
+    return;
+  }
   if(!_sdPdfResult)_sdPdfResult=await buildDocPDF(type,id);
   try{
     // Use API client (routes to /api/send/email — SaaS backend with Gmail PDF attachment)

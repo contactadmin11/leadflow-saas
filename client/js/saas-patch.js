@@ -495,14 +495,7 @@ window.doRegister = async function() {
   const restored = await API.restoreSession().catch(() => false);
 
   if (!API.isLoggedIn() && !restored) {
-    // Show login screen locally instead of forcing a redirect to landing page
-    if (typeof showLoginScreen === 'function') {
-      document.getElementById('appContainer').style.display = 'none';
-      document.getElementById('loginScreen').style.display = 'block';
-      showLoginScreen();
-    } else {
-      window.location.href = '/';
-    }
+    window.location.href = '/';
     return;
   }
 
