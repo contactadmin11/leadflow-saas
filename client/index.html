@@ -3565,6 +3565,7 @@ function validatePhone(el){
 }
 function renderActivities(){renderActs();}
 let msgContacts=[],msgResults=[],msgSending=false,msgSendIdx=0,msgChannel='whatsapp',_msgTplId='tpl-pay';
+let msgSendQueue=null; // null = send all contacts, otherwise send only these
 let msgSett={owner:'',business:'',phone:'',upi:'',gmail:'',gmailName:''};
 const MSG_TPLS=[
   {id:'tpl-pay',name:'💳 Payment Reminder',ch:'whatsapp',subj:'',body:`Dear *{{name}}*,\n\nHope you are well! 🙏\n\nFriendly reminder: Invoice *{{invoice_no}}* for *₹{{amount}}* is due on *{{due_date}}*.\n\nKindly arrange payment at your earliest.\n\n💳 *UPI:* {{upi}}\n\nIf already paid, share the transaction ref.\n\nThank you! 🙏\n*{{owner}}*\n*{{business}}*\n📞 {{your_phone}}`},
@@ -3936,10 +3937,9 @@ function msgBatchInvert(){const n=new Set();msgContacts.forEach((_,i)=>{if(!msgS
 function msgSendSelected(){
   if(!msgSelected.size){toast('Select contacts first!','warning');return;}
   const selectedList=Array.from(msgSelected).sort((a,b)=>a-b).map(i=>msgContacts[i]);
-  if(!confirm('Send to '+selectedList.length+' selected contacts?\nThis sets the queue to your selection only.'))return;
-  window._msgFullSave=msgContacts;
-  msgContacts=selectedList;
-  msgSelected.clear(); msgPage=0;
+  if(!confirm('Send to '+selectedList.length+' selected contacts?\nAll '+msgContacts.length+' contacts will still show in the list.'))return;
+  msgSendQueue=selectedList; // queue only selected — msgContacts unchanged
+  msgSelected.clear();
   toast('Queue set to '+selectedList.length+' contacts — compose and send!','success',5000);
   msgGoTab('compose');
 }
@@ -3983,34 +3983,37 @@ function msgRenderQueue(){
 }
 function msgStart(){
   const body=(document.getElementById('msgBodyTxt')||{}).value||'';
-  if(!msgContacts.length){toast('No contacts loaded!','warning');return;}
+  const queue=msgSendQueue||msgContacts; // use selected queue or all contacts
+  if(!queue.length){toast('No contacts loaded!','warning');return;}
   if(!body.trim()){toast('Please write a message first!','warning');return;}
   const dry=document.getElementById('msgDryRun')?.checked;
   const ch=msgChannel;
   // Check we have valid contacts for chosen channel
-  const validWA=msgContacts.filter(c=>c.phone).length;
-  const validEM=msgContacts.filter(c=>c.email).length;
+  const validWA=queue.filter(c=>c.phone).length;
+  const validEM=queue.filter(c=>c.email).length;
   if(!dry){
     if(ch==='whatsapp'&&validWA===0){toast('No contacts have phone numbers!','error');return;}
     if(ch==='email'&&validEM===0){toast('No contacts have email addresses!','error');return;}
     if(ch==='whatsapp'){
-      toast(`⚠️ WhatsApp Web tabs will open one by one. Keep WhatsApp Web logged in and click Send in each tab.`,'warning',6000);
+      toast(`⚠️ WhatsApp Web will open per contact. Keep WhatsApp Web logged in and click Send in each.`,'warning',6000);
     }
   }
-  if(!confirm('Ready to send to '+msgContacts.length+' contacts via '+ch.toUpperCase()+(dry?' (DRY RUN) - no links opened':'')+'. Proceed?'))return;
+  if(!confirm('Ready to send to '+queue.length+' contacts via '+ch.toUpperCase()+(dry?' (DRY RUN) - no links opened':'')+'. Proceed?'))return;
   msgSending=true;msgResults=[];msgSendIdx=0;
+  window._msgCurrentQueue=queue; // snapshot for this send run
   document.getElementById('msgStartBtn').style.display='none';
   document.getElementById('msgStopBtn').style.display='';
   document.getElementById('msgProgSec').style.display='';
   msgClearLog();msgRenderQueue();
   msgLogLine('━'.repeat(50),'lg-in');
-  msgLogLine(`${dry?'🧪 DRY RUN':'🚀 LIVE SEND'} — ${msgContacts.length} contacts — ${ch.toUpperCase()}`,'lg-in');
+  msgLogLine(`${dry?'🧪 DRY RUN':'🚀 LIVE SEND'} — ${queue.length} contacts — ${ch.toUpperCase()}`,'lg-in');
   msgLogLine('━'.repeat(50),'lg-in');
   msgSendNext();
 }
 function msgSendNext(){
-  if(!msgSending||msgSendIdx>=msgContacts.length){msgFinish();return;}
-  const i=msgSendIdx,c=msgContacts[i];
+  const queue=window._msgCurrentQueue||msgContacts;
+  if(!msgSending||msgSendIdx>=queue.length){msgFinish();return;}
+  const i=msgSendIdx,c=queue[i];
   const body=(document.getElementById('msgBodyTxt')||{}).value||'';
   const subj=(document.getElementById('msgSubjTxt')||{}).value||'';
   const dry=document.getElementById('msgDryRun')?.checked;
@@ -4018,14 +4021,14 @@ function msgSendNext(){
   const rendered=msgRender(body,c),rendSubj=msgRender(subj,c);
   const qi=document.getElementById('qi-'+i);
   if(qi){qi.classList.add('qi-run');const st=document.getElementById('qi-st-'+i);if(st)st.textContent='Sending…';}
-  const pct=Math.round(((i+1)/msgContacts.length)*100);
+  const pct=Math.round(((i+1)/queue.length)*100);
   const pb=document.getElementById('msgProgBar'),pl=document.getElementById('msgProgLbl');
   if(pb)pb.style.width=pct+'%';
-  if(pl)pl.textContent=`Contact ${i+1} of ${msgContacts.length} (${pct}%)`;
+  if(pl)pl.textContent=`Contact ${i+1} of ${queue.length} (${pct}%)`;
   msgLogLine('','');
-  msgLogLine(`[${i+1}/${msgContacts.length}] Processing: ${c.name} ${c.company?'('+c.company+')':''}`, 'lg-in');
+  msgLogLine(`[${i+1}/${queue.length}] Processing: ${c.name} ${c.company?'('+c.company+')':''}`, 'lg-in');
   let ok=true, waOk=false, emOk=false;
-  // ── WhatsApp ──
+  // ── WhatsApp ── (always opens web.whatsapp.com, reuses whatsapp_web_tab)
   if(msgChannel==='whatsapp'||msgChannel==='both'){
     if(c.phone){
       const ph=c.phone.replace(/\D/g,'');
@@ -4040,21 +4043,45 @@ function msgSendNext(){
       if(msgChannel==='whatsapp')ok=false;
     }
   }
-  // ── Email ──
+  // ── Email ── (use backend API if logged in for real send; else mailto fallback)
   if(msgChannel==='email'||msgChannel==='both'){
     if(c.email){
-      const mailURL='mailto:'+c.email+'?subject='+encodeURIComponent(rendSubj)+'&body='+encodeURIComponent(rendered);
-      if(dry){msgLogLine('  ✅ [DRY RUN] Email → '+c.email,'lg-ok');emOk=true;}
-      else{
-        try{
-          // Open email in iframe to avoid popup blocker
-          const frame=document.createElement('iframe');
-          frame.style.cssText='display:none;width:0;height:0;border:0';
-          document.body.appendChild(frame);
-          setTimeout(()=>{try{frame.contentWindow.location.href=mailURL;}catch(e){window.open(mailURL,'_self');}setTimeout(()=>frame.remove(),3000);},waOk&&msgChannel==='both'?1200:50);
-          emOk=true;msgLogLine('  📧 Email client opened → '+c.email,'lg-ok');
-        }catch(err){msgLogLine('  ❌ Email open failed: '+err.message,'lg-er');}
-      }
+      if(dry){msgLogLine('  ✅ [DRY RUN] Email → '+c.email,'lg-ok');emOk=true;msgSendIdx++;setTimeout(msgSendNext,(dry?400:delay*1000));return;}
+      // Try backend API first (sends via Gmail with real delivery)
+      const emailDelay=waOk&&msgChannel==='both'?1200:50;
+      setTimeout(async()=>{
+        let apiSent=false;
+        if(typeof API!=='undefined'&&API.isLoggedIn()){
+          try{
+            const res=await API.sendEmail({toEmail:c.email,toName:c.name||c.email,subject:rendSubj,message:rendered});
+            if(res&&res.success){
+              emOk=true;apiSent=true;
+              msgLogLine('  📧 Email sent via server → '+c.email,'lg-ok');
+            }else{
+              throw new Error((res&&res.error)||'Server email failed');
+            }
+          }catch(err){
+            msgLogLine('  ⚠️ Server email failed ('+err.message+') — falling back to mailto','lg-wn');
+          }
+        }
+        if(!apiSent){
+          // Fallback: open mailto in iframe
+          try{
+            const mailURL='mailto:'+c.email+'?subject='+encodeURIComponent(rendSubj)+'&body='+encodeURIComponent(rendered);
+            const frame=document.createElement('iframe');
+            frame.style.cssText='display:none;width:0;height:0;border:0';
+            document.body.appendChild(frame);
+            setTimeout(()=>{try{frame.contentWindow.location.href=mailURL;}catch(e){window.open(mailURL,'_self');}setTimeout(()=>frame.remove(),3000);},50);
+            emOk=true;
+            msgLogLine('  📧 Email client opened (mailto) → '+c.email,'lg-ok');
+          }catch(err){msgLogLine('  ❌ Email failed: '+err.message,'lg-er');}
+        }
+        const finalStatus2=(!ok?'❌ Skipped':(waOk||emOk)?'✅ Sent':'⚠️ Partial');
+        msgResults.push({name:c.name,phone:c.phone||'',email:c.email||'',company:c.company||'',channel:msgChannel,status:finalStatus2,time:new Date().toLocaleTimeString()});
+        if(qi){qi.classList.remove('qi-run');qi.classList.add(finalStatus2.includes('✅')?'qi-ok':'qi-fail');const st=document.getElementById('qi-st-'+i);if(st)st.textContent=finalStatus2;}
+        msgSendIdx++;setTimeout(msgSendNext,delay*1000);
+      },emailDelay);
+      return; // async path handles increment+next
     }else{
       msgLogLine('  ⚠️ No email address — Email skipped','lg-wn');
       if(msgChannel==='email')ok=false;
@@ -4071,14 +4098,18 @@ function msgSendNext(){
   setTimeout(msgSendNext,(dry?400:delay*1000));
 }
 function msgFinish(){
-  msgSending=false;document.getElementById('msgStartBtn').style.display='';document.getElementById('msgStopBtn').style.display='none';
+  msgSending=false;
+  window._msgCurrentQueue=null; // clear snapshot
+  msgSendQueue=null;            // clear selected-send queue so next time it uses all
+  document.getElementById('msgStartBtn').style.display='';
+  document.getElementById('msgStopBtn').style.display='none';
   const sent=msgResults.filter(r=>r.status.includes('✅')||r.status.includes('🧪')).length;
   const fail=msgResults.filter(r=>r.status.includes('⚠️')).length;
   msgLogLine(`DONE ✅ ${sent} sent  ⚠️ ${fail} issues  Total: ${msgResults.length}`,'lg-ok');
   toast(`Done! ${sent} sent, ${fail} issues`,'success',5000);
   setTimeout(()=>msgGoTab('results'),800);
 }
-function msgStop(){msgSending=false;msgLogLine('⏹ Stopped by user','lg-wn');document.getElementById('msgStartBtn').style.display='';document.getElementById('msgStopBtn').style.display='none';}
+function msgStop(){msgSending=false;window._msgCurrentQueue=null;msgSendQueue=null;msgLogLine('⏹ Stopped by user','lg-wn');document.getElementById('msgStartBtn').style.display='';document.getElementById('msgStopBtn').style.display='none';}
 function msgRenderResults(){
   const tbody=document.getElementById('msgResBody');
   const s=msgResults.filter(r=>r.status.includes('✅')||r.status.includes('🧪')).length,f=msgResults.filter(r=>r.status.includes('⚠️')).length;
