@@ -5105,11 +5105,14 @@ async function _sendEmailWithPDF(email,name,subject,message,type,id){
   }
 }
 
-async function saveGmailConfig(){
+async function saveGmailConfig(silent=false){
   const gmailUser=document.getElementById('setGmailUser')?.value.trim();
   const gmailPass=document.getElementById('setGmailPass')?.value.replace(/\s/g,'');
   const fromName=document.getElementById('setGmailFromName')?.value.trim();
-  if(!gmailUser||!gmailPass){toast('Gmail address and App Password required','warning');return;}
+  if(!gmailUser||!gmailPass){
+    if(!silent) toast('Gmail address and App Password required','warning');
+    return false;
+  }
   // Save to local settings object and API
   settings.gmailUser=gmailUser;
   settings.gmailPass=gmailPass;
@@ -5117,13 +5120,18 @@ async function saveGmailConfig(){
   LS.set(KEYS.settings,settings);
   try{
     await API.saveSettings({...settings,gmailUser,gmailPass,gmailFromName:fromName});
-    toast('✅ Gmail config saved! Click Test Email to verify.','success',5000);
+    if(!silent) toast('✅ Gmail config saved! Click Test Email to verify.','success',5000);
+    return true;
   }catch(e){
-    toast('Save error: '+e.message,'error');
+    if(!silent) toast('Save error: '+e.message,'error');
+    return false;
   }
 }
 
 async function testGmailEmail(){
+  const saved = await saveGmailConfig(true);
+  if (!saved) return; // Error already handled or missing fields
+
   const gmailUser=document.getElementById('setGmailUser')?.value.trim()||settings.gmailUser;
   if(!gmailUser){toast('Add Gmail address first in Settings → Email','warning');return;}
   toast('📧 Sending test email…','info',3000);
@@ -5131,7 +5139,7 @@ async function testGmailEmail(){
     const result=await API.testEmail();
     if(result&&result.success){toast('✅ Test email sent! Check inbox: '+gmailUser,'success',6000);}
     else{toast('Test failed: '+(result&&result.error||'Unknown error')+'\n💡 Check Gmail credentials and ensure 2-Step Verification is ON','error',8000);}
-  }catch(e){toast('Test email failed: '+e.message,'error',8000);}
+  }catch(e){toast('Test email failed: '+e.message+'\n💡 Ensure 2-Step Verification is ON and you generated an App Password!','error',8000);}
 }
 
 async function testResendEmail(){return testGmailEmail();}
