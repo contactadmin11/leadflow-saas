@@ -37,11 +37,20 @@ const initSession = async (userId) => {
   const { version } = await fetchLatestBaileysVersion();
 
   return new Promise((resolve) => {
+    // Baileys requires a Pino-compatible logger with .child() method
+    // Using a silent stub so it doesn't flood logs
+    const baileysLogger = {
+      level: 'silent',
+      trace: () => {}, debug: () => {}, info: () => {},
+      warn:  () => {}, error: () => {}, fatal: () => {},
+      child: () => baileysLogger   // ← .child() is required by Baileys
+    };
+
     const sock = makeWASocket({
       version,
       auth: state,
       printQRInTerminal: false,
-      logger: { level: 'silent', ...console },
+      logger: baileysLogger,
       browser: ['LeadFlow CRM', 'Chrome', '1.0.0']
     });
 
