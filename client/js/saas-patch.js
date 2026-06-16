@@ -244,41 +244,53 @@ window._sendViaLocalServer = async function(phone, message, type, id, toEmail = 
 
 // ── Same-browser WhatsApp override ────────────────────────────────────────────
 // Strategy:
-//   1. Try backend API → Baileys sends message WITH PDF attached automatically
-//   2. If WA not connected → download PDF + open WA Web + show attach guide
+//   IF WhatsApp connected via backend (Baileys):
+//     → Send via API (with PDF if possible, text-only if PDF fails)
+//     → NEVER open WhatsApp Web
+//   IF not connected:
+//     → Download PDF to browser + Open WhatsApp Web + Show attach guide
 window._sendViaSameBrowserWA = async function(phone, message, type, id) {
   const resolvedId = await _resolveDocId(type, id);
+  const isWAConnected = !!(window.waNodeReady || window.waServerReady);
 
-  // ── Attempt 1: Backend Baileys API (auto-attaches PDF) ──
-  if (typeof API !== 'undefined' && API.isLoggedIn()) {
+  // ══════════════════════════════════════════════════════════
+  // PATH 1: WhatsApp connected via Baileys → backend API only
+  // ══════════════════════════════════════════════════════════
+  if (isWAConnected && typeof API !== 'undefined' && API.isLoggedIn()) {
+    const statusEl = document.getElementById('sdPdfReady');
+    if (statusEl) statusEl.innerHTML = '<span style="color:#f59e0b">⏳ Sending via WhatsApp…</span>';
+
     try {
-      const statusEl = document.getElementById('sdPdfReady');
-      if (statusEl) statusEl.innerHTML = '<span style="color:#f59e0b">⏳ Sending PDF via WhatsApp…</span>';
+      const payload = { phone, message };
+      // Add doc info only if we have valid IDs (PDF will be attached if doc found)
+      if (type && (resolvedId || id)) {
+        payload.docType = type;
+        payload.docId   = resolvedId || id;
+      }
 
-      const result = await API.sendWA({
-        phone,
-        message,
-        docType: type,
-        docId: resolvedId || id
-      });
+      const result = await API.sendWA(payload);
 
       if (result && result.success) {
-        if (statusEl) statusEl.innerHTML = '<span style="color:#10b981;font-weight:700">✅ PDF sent via WhatsApp!</span>';
-        if (typeof toast === 'function') toast('✅ PDF sent to WhatsApp!', 'success', 5000);
-        return; // Done — PDF delivered automatically
+        const withPDF = result.method === 'pdf_attached';
+        if (statusEl) statusEl.innerHTML = `<span style="color:#10b981;font-weight:700">✅ ${withPDF ? 'PDF sent via WhatsApp!' : 'Message sent via WhatsApp!'}</span>`;
+        if (typeof toast === 'function') toast(withPDF ? '✅ PDF sent via WhatsApp!' : '✅ Message sent via WhatsApp!', 'success', 5000);
+        return; // ✅ Done — WhatsApp Web will NOT open
       } else {
-        // WA connected but send failed — fall through to manual
-        const errMsg = (result && result.error) || 'Send failed';
-        if (statusEl) statusEl.innerHTML = `<span style="color:#f59e0b">⚠️ ${errMsg} — trying manual method…</span>`;
+        throw new Error((result && result.error) || 'Send failed');
       }
     } catch (e) {
-      // Network error or WA not connected — fall through to manual
-      console.warn('[WA] Backend send failed, using manual fallback:', e.message);
+      // Even on error — if WA is connected, show error & do NOT open WA Web
+      const errMsg = e.message || 'Unknown error';
+      if (statusEl) statusEl.innerHTML = `<span style="color:#ef4444">❌ WA Send failed: ${errMsg}</span>`;
+      if (typeof toast === 'function') toast('❌ WhatsApp send failed: ' + errMsg, 'error', 6000);
+      console.error('[WA] Backend send error:', e);
+      return; // ✅ Still do NOT open WA Web — user will see error toast
     }
   }
 
-  // ── Attempt 2: Download PDF + Open WA Web (manual attach) ──
-  // Download the PDF first
+  // ══════════════════════════════════════════════════════════
+  // PATH 2: WhatsApp NOT connected → manual attach flow
+  // ══════════════════════════════════════════════════════════
   let fname = 'document.pdf';
   try {
     if (window._sdPdfResult && window._sdPdfResult.blob) {
@@ -289,52 +301,44 @@ window._sendViaSameBrowserWA = async function(phone, message, type, id) {
       document.body.appendChild(a);
       a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-    } else if (type && (resolvedId || id)) {
-      // Build PDF if not already built
-      if (typeof buildDocPDF === 'function') {
-        const result = await buildDocPDF(type, id);
-        if (result && result.blob) {
-          fname = result.fname || fname;
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(result.blob);
-          a.download = fname;
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-        }
+    } else if (type && id && typeof buildDocPDF === 'function') {
+      const result = await buildDocPDF(type, id);
+      if (result && result.blob) {
+        fname = result.fname || fname;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(result.blob);
+        a.download = fname;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
       }
     }
   } catch (pdfErr) {
     console.warn('[WA] PDF download failed:', pdfErr.message);
   }
 
-  // Open WhatsApp Web with message pre-filled (reuse same tab)
+  // Open WhatsApp Web with message pre-filled
   const waUrl = `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
   window.open(waUrl, 'whatsapp_web_tab');
 
-  // Show step-by-step guide overlay
-  if (typeof _showWAGuide === 'function') {
-    setTimeout(() => _showWAGuide(fname), 800);
-  } else {
-    // Inline guide if _showWAGuide not available
-    const ex = document.getElementById('waGuideOverlay');
-    if (ex) ex.remove();
-    const d = document.createElement('div');
-    d.id = 'waGuideOverlay';
-    d.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1e3a8a;color:#fff;border-radius:14px;padding:16px 20px;z-index:9999;max-width:300px;box-shadow:0 8px 32px rgba(0,0,0,.4);font-size:13px;line-height:1.7';
-    d.innerHTML = `<div style="font-weight:700;font-size:14px;margin-bottom:8px">📎 PDF downloaded!</div>
-      <div>In WhatsApp Web tab:</div>
-      <div>1️⃣ Click <strong>📎</strong> → <strong>Document</strong></div>
-      <div>2️⃣ Select <strong>${fname}</strong> from Downloads</div>
-      <div>3️⃣ Click <strong>Send</strong> ✅</div>
-      <div style="margin-top:8px;font-size:11px;color:#93c5fd">💡 Connect WhatsApp in Settings → WhatsApp for auto-send</div>
-      <button onclick="document.getElementById('waGuideOverlay').remove()" style="margin-top:10px;background:rgba(255,255,255,.2);border:none;color:#fff;padding:5px 14px;border-radius:6px;cursor:pointer;width:100%">Got it ✓</button>`;
-    document.body.appendChild(d);
-    setTimeout(() => { if (d.parentNode) d.remove(); }, 15000);
-  }
+  // Show step-by-step attach guide
+  const ex = document.getElementById('waGuideOverlay');
+  if (ex) ex.remove();
+  const d = document.createElement('div');
+  d.id = 'waGuideOverlay';
+  d.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1e3a8a;color:#fff;border-radius:14px;padding:16px 20px;z-index:9999;max-width:300px;box-shadow:0 8px 32px rgba(0,0,0,.4);font-size:13px;line-height:1.7';
+  d.innerHTML = `<div style="font-weight:700;font-size:14px;margin-bottom:8px">📎 PDF downloaded!</div>
+    <div>In WhatsApp Web tab:</div>
+    <div>1️⃣ Click <strong>📎</strong> → <strong>Document</strong></div>
+    <div>2️⃣ Select <strong>${fname}</strong> from Downloads</div>
+    <div>3️⃣ Click <strong>Send</strong> ✅</div>
+    <div style="margin-top:8px;font-size:11px;color:#93c5fd">💡 Connect WhatsApp in Settings for auto-send</div>
+    <button onclick="document.getElementById('waGuideOverlay').remove()" style="margin-top:10px;background:rgba(255,255,255,.2);border:none;color:#fff;padding:5px 14px;border-radius:6px;cursor:pointer;width:100%">Got it ✓</button>`;
+  document.body.appendChild(d);
+  setTimeout(() => { if (d.parentNode) d.remove(); }, 15000);
 
   if (typeof toast === 'function') {
-    toast(`📥 PDF "${fname}" downloaded — attach it in WhatsApp Web tab`, 'info', 8000);
+    toast(`📥 PDF "${fname}" downloaded — attach it in WhatsApp Web`, 'info', 8000);
   }
 };
 
