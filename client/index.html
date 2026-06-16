@@ -4718,7 +4718,11 @@ async function doSendDoc(){
     // 1. Resolves local ID → MongoDB ID
     // 2. Tries backend API (auto-attaches PDF if WA connected via Baileys)
     // 3. Only opens WA Web as last resort if backend fails
-    await _sendViaSameBrowserWA(waPhone,msg,sdDocType,sdDocId);
+    if (window._sendViaSameBrowserWA) {
+      await window._sendViaSameBrowserWA(waPhone,msg,sdDocType,sdDocId);
+    } else {
+      await _sendViaSameBrowserWA(waPhone,msg,sdDocType,sdDocId);
+    }
     if(sdChannel==='wa') return;
   }
 
@@ -4726,7 +4730,11 @@ async function doSendDoc(){
   if(sdChannel==='email'||sdChannel==='both'){
     if(!email){toast('Email address daalo','warning');return;}
     closeModal('sendDocModal');
-    await _sendEmailWithPDF(email,recipName,subject,msg,sdDocType,sdDocId);
+    if (window._sendEmailWithPDF) {
+      await window._sendEmailWithPDF(email,recipName,subject,msg,sdDocType,sdDocId);
+    } else {
+      await _sendEmailWithPDF(email,recipName,subject,msg,sdDocType,sdDocId);
+    }
   }
 }
 
@@ -5058,9 +5066,8 @@ async function _sendEmailResend(email,name,subject,message,type,id){
 async function _sendEmailWithPDF(email,name,subject,message,type,id){
   if(!email){toast('Email address required','warning');return;}
   const trimmedEmail = email.trim();
-  const emailRegex=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const emails = trimmedEmail.split(/[\s,;]+/).filter(Boolean);
-  if (emails.length === 0 || !emails.every(e => emailRegex.test(e))) {
+  if (emails.length === 0) {
     toast('Invalid email format: '+email,'warning');
     return;
   }
