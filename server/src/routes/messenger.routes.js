@@ -25,16 +25,28 @@ router.post('/whatsapp', async (req, res, next) => {
     const { phone, message, docType, docId } = req.body;
     if (!phone) return res.status(400).json({ error: 'Phone required' });
 
+    let pdfBuffer = null;
+    let pdfName   = null;
+
+    // Generate and attach PDF if a document is specified
     if (docType && docId) {
+      try {
+        const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
+        pdfBuffer = buffer;
+        pdfName   = filename;
+      } catch (pdfErr) {
+        // Non-fatal — send text only if PDF generation fails
+        console.warn('[WA] PDF generation failed, sending text only:', pdfErr.message);
+      }
       if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
       if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
     }
 
-    // WhatsApp gets only the text message (no PDF, no download links)
-    const result = await sendMessage(req.user.id, phone, message, null, null);
+    // Send message — with PDF attached if available, otherwise text only
+    const result = await sendMessage(req.user.id, phone, message, pdfBuffer, pdfName);
     if (!result.success) return res.status(400).json(result);
 
-    await audit({ userId: req.user.id, action: 'WA_SENT', resource: docType || 'message', resourceId: docId, details: { phone }, req });
+    await audit({ userId: req.user.id, action: 'WA_SENT', resource: docType || 'message', resourceId: docId, details: { phone, withPDF: !!pdfBuffer }, req });
     res.json(result);
   } catch (err) { next(err); }
 });
@@ -91,7 +103,7 @@ router.post('/both', async (req, res, next) => {
     }
 
     if (phone) {
-      results.whatsapp = await sendMessage(req.user.id, phone, message, null, null);
+      results.whatsapp = await sendMessage(req.user.id, phone, message, pdfBuffer, pdfName);
     }
     if (toEmail && settings) {
       results.email = await sendEmail(
