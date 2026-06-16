@@ -25,29 +25,35 @@ router.post('/whatsapp', async (req, res, next) => {
     const { phone, message, docType, docId } = req.body;
     if (!phone) return res.status(400).json({ error: 'Phone required' });
 
+    const mongoose = require('mongoose');
     let pdfBuffer = null;
     let pdfName   = null;
 
-    // Generate and attach PDF if a document is specified
-    if (docType && docId) {
+    // Generate and attach PDF if valid document specified
+    if (docType && docId && mongoose.isValidObjectId(docId)) {
       try {
         const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
         pdfBuffer = buffer;
         pdfName   = filename;
       } catch (pdfErr) {
-        // Non-fatal — send text only if PDF generation fails
+        // Non-fatal — still send text message even if PDF generation fails
         console.warn('[WA] PDF generation failed, sending text only:', pdfErr.message);
       }
-      if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
-      if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
+      // Mark doc as Sent
+      try {
+        if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
+        if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
+      } catch(e) { console.warn('[WA] Status update failed:', e.message); }
+    } else if (docType && docId) {
+      console.warn('[WA] Invalid docId (not ObjectId):', docId, '— sending text only');
     }
 
-    // Send message — with PDF attached if available, otherwise text only
+    // Send via Baileys — with PDF if available, text-only if not
     const result = await sendMessage(req.user.id, phone, message, pdfBuffer, pdfName);
     if (!result.success) return res.status(400).json(result);
 
     await audit({ userId: req.user.id, action: 'WA_SENT', resource: docType || 'message', resourceId: docId, details: { phone, withPDF: !!pdfBuffer }, req });
-    res.json(result);
+    res.json({ ...result, withPDF: !!pdfBuffer });
   } catch (err) { next(err); }
 });
 

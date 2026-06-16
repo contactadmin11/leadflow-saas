@@ -481,6 +481,21 @@
       _bridgeReady = true;
       console.log(`[Bridge] ✅ Loaded: ${leads.length} leads, ${clients.length} clients, ${invoices.length} invoices, ${quotes.length} quotes`);
 
+      // ── Populate _lfIdMap so _resolveDocId always works ──
+      // This ensures WhatsApp/Email PDF attachment works even after page refresh
+      window._lfIdMap = window._lfIdMap || {};
+      [...invoices, ...quotes, ...leads, ...clients, ...contacts].forEach(item => {
+        if (item._id && item.id && item._id !== item.id) {
+          window._lfIdMap[item.id] = item._id;   // localId → mongoId
+        }
+        // Also map by invoiceNo/quoteNo for extra reliability
+        if (item._id && (item.invoiceNo || item.quoteNo)) {
+          const docNo = item.invoiceNo || item.quoteNo;
+          window._lfIdMap[docNo] = item._id;
+        }
+      });
+      localStorage.setItem('lf_id_map', JSON.stringify(window._lfIdMap));
+
       return { leads, contacts, clients, products, quotes, invoices, payments, activities, templates, rules, settings };
     } catch(e) {
       console.error('[Bridge] Failed to load data:', e);

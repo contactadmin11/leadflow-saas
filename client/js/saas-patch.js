@@ -412,18 +412,34 @@ window._sendEmailResend = window._sendEmailWithPDF;
 async function _resolveDocId(type, localId) {
   try {
     if (!localId) return null;
-    // If it looks like a MongoDB ObjectId already, return as-is
+
+    // 1. Already looks like a MongoDB ObjectId (24 hex chars) → use as-is
     if (/^[0-9a-f]{24}$/i.test(localId)) return localId;
 
-    // Check ID map first
+    // 2. Check ID map (populated on login and on every data load)
     const mapped = window._lfIdMap?.[localId];
-    if (mapped) return mapped;
+    if (mapped && /^[0-9a-f]{24}$/i.test(mapped)) return mapped;
 
-    // Search in local storage for the item, then find its _id
-    const key   = type === 'invoice' ? 'lf2_invoices' : 'lf2_quotes';
-    const items = JSON.parse(localStorage.getItem(key) || '[]');
-    const item  = items.find(i => (i.id === localId || i._id === localId));
-    return item?._id || item?.id || localId;
+    // 3. Search localStorage for the item by its local id
+    const lsKey  = type === 'invoice' ? 'lf2_invoices' : 'lf2_quotes';
+    const lsItems = JSON.parse(localStorage.getItem(lsKey) || '[]');
+    const lsItem  = lsItems.find(i => i.id === localId || i._id === localId);
+    if (lsItem) {
+      const mongoId = lsItem._id || lsItem.id;
+      if (/^[0-9a-f]{24}$/i.test(mongoId)) return mongoId;
+    }
+
+    // 4. Search in-memory global arrays (most up-to-date source)
+    const memArr = type === 'invoice' ? (window.invoices || []) : (window.quotes || []);
+    const memItem = memArr.find(i => i.id === localId || i._id === localId);
+    if (memItem) {
+      const mongoId = memItem._id || memItem.id;
+      if (/^[0-9a-f]{24}$/i.test(mongoId)) return mongoId;
+    }
+
+    // Nothing found — return original (backend will fail gracefully)
+    console.warn('[resolveDocId] Could not resolve MongoDB ID for:', type, localId);
+    return localId;
   } catch { return localId; }
 }
 
