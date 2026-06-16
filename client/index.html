@@ -4712,15 +4712,13 @@ async function doSendDoc(){
     let waPhone=phone;
     if(waPhone.length===10) waPhone='91'+waPhone;
 
-    closeModal('sendDocModal'); // Close modal FIRST so WA tab is visible
+    closeModal('sendDocModal'); // Close modal FIRST
 
-    if(waServerReady){
-      // Python server running → auto-attach PDF
-      await _sendViaLocalServer(waPhone,msg,sdDocType,sdDocId,email,recipName,subject,sdChannel);
-    } else {
-      // Same-browser tab → PDF downloads → user attaches in 1 click
-      await _sendViaSameBrowserWA(waPhone,msg,sdDocType,sdDocId);
-    }
+    // _sendViaSameBrowserWA handles everything:
+    // 1. Resolves local ID → MongoDB ID
+    // 2. Tries backend API (auto-attaches PDF if WA connected via Baileys)
+    // 3. Only opens WA Web as last resort if backend fails
+    await _sendViaSameBrowserWA(waPhone,msg,sdDocType,sdDocId);
     if(sdChannel==='wa') return;
   }
 
