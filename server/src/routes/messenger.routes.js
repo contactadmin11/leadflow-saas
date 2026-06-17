@@ -22,24 +22,28 @@ router.use(protect);
  */
 router.post('/whatsapp', async (req, res, next) => {
   try {
-    const { phone, message, docType, docId } = req.body;
+    const { phone, message, docType, docId, pdfBase64, fileName } = req.body;
     if (!phone) return res.status(400).json({ error: 'Phone required' });
 
     const mongoose = require('mongoose');
     let pdfBuffer = null;
     let pdfName   = null;
 
-    // Generate and attach PDF if valid document specified
-    if (docType && docId && mongoose.isValidObjectId(docId)) {
+    if (pdfBase64 && fileName) {
+      pdfBuffer = Buffer.from(pdfBase64, 'base64');
+      pdfName   = fileName;
+      if (docId && mongoose.isValidObjectId(docId)) {
+        if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } }).catch(()=>null);
+        if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } }).catch(()=>null);
+      }
+    } else if (docType && docId && mongoose.isValidObjectId(docId)) {
       try {
         const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
         pdfBuffer = buffer;
         pdfName   = filename;
       } catch (pdfErr) {
-        // Non-fatal — still send text message even if PDF generation fails
         console.warn('[WA] PDF generation failed, sending text only:', pdfErr.message);
       }
-      // Mark doc as Sent
       try {
         if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
         if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
@@ -64,7 +68,7 @@ router.post('/whatsapp', async (req, res, next) => {
  */
 router.post('/email', async (req, res, next) => {
   try {
-    const { toEmail, toName, subject, message, docType, docId } = req.body;
+    const { toEmail, toName, subject, message, docType, docId, pdfBase64, fileName } = req.body;
     if (!toEmail) return res.status(400).json({ error: 'Email required' });
 
     const settings = await Settings.findOne({ userId: req.user.id });
@@ -73,12 +77,19 @@ router.post('/email', async (req, res, next) => {
     let pdfBuffer = null;
     let pdfName   = null;
 
-    if (docType && docId) {
+    if (pdfBase64 && fileName) {
+      pdfBuffer = Buffer.from(pdfBase64, 'base64');
+      pdfName   = fileName;
+      if (docId && /^[0-9a-fA-F]{24}$/.test(docId)) {
+        if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } }).catch(()=>null);
+        if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } }).catch(()=>null);
+      }
+    } else if (docType && docId && /^[0-9a-fA-F]{24}$/.test(docId)) {
       const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
       pdfBuffer = buffer;
       pdfName   = filename;
-      if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
-      if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
+      if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } }).catch(()=>null);
+      if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } }).catch(()=>null);
     }
 
     const result = await sendEmail(settings, toEmail, toName, subject, message, pdfBuffer, pdfName);
@@ -93,19 +104,26 @@ router.post('/email', async (req, res, next) => {
  */
 router.post('/both', async (req, res, next) => {
   try {
-    const { phone, toEmail, toName, subject, message, docType, docId } = req.body;
+    const { phone, toEmail, toName, subject, message, docType, docId, pdfBase64, fileName } = req.body;
     const settings = await Settings.findOne({ userId: req.user.id });
     const results  = {};
 
     let pdfBuffer = null;
     let pdfName   = null;
 
-    if (docType && docId) {
+    if (pdfBase64 && fileName) {
+      pdfBuffer = Buffer.from(pdfBase64, 'base64');
+      pdfName   = fileName;
+      if (docId && /^[0-9a-fA-F]{24}$/.test(docId)) {
+        if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } }).catch(()=>null);
+        if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } }).catch(()=>null);
+      }
+    } else if (docType && docId && /^[0-9a-fA-F]{24}$/.test(docId)) {
       const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
       pdfBuffer = buffer;
       pdfName   = filename;
-      if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } });
-      if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } });
+      if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } }).catch(()=>null);
+      if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } }).catch(()=>null);
     }
 
     if (phone) {

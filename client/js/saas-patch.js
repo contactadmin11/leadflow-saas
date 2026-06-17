@@ -267,11 +267,15 @@ window._sendViaSameBrowserWA = async function(phone, message, type, id) {
         payload.docType = type;
         payload.docId   = resolvedId || id;
       }
+      if (window._sdPdfResult) {
+        payload.pdfBase64 = window._sdPdfResult.base64;
+        payload.fileName  = window._sdPdfResult.fname;
+      }
 
       const result = await API.sendWA(payload);
 
       if (result && result.success) {
-        const withPDF = result.method === 'pdf_attached';
+        const withPDF = result.method === 'pdf_attached' || !!window._sdPdfResult;
         if (statusEl) statusEl.innerHTML = `<span style="color:#10b981;font-weight:700">✅ ${withPDF ? 'PDF sent via WhatsApp!' : 'Message sent via WhatsApp!'}</span>`;
         if (typeof toast === 'function') toast(withPDF ? '✅ PDF sent via WhatsApp!' : '✅ Message sent via WhatsApp!', 'success', 5000);
         return; // ✅ Done — WhatsApp Web will NOT open
@@ -353,14 +357,20 @@ window._sendEmailWithPDF = async function(email, name, subject, message, type, i
   if (statusEl) statusEl.innerHTML = '<span style="color:#f59e0b">⏳ Sending email with PDF attachment…</span>';
 
   try {
-    const result = await API.sendEmail({
+    const payload = {
       toEmail:  email,
       toName:   name || email,
       subject:  subject,
       message:  message,
       docType:  type,
       docId:    docId || id
-    });
+    };
+    if (window._sdPdfResult) {
+      payload.pdfBase64 = window._sdPdfResult.base64;
+      payload.fileName  = window._sdPdfResult.fname;
+    }
+
+    const result = await API.sendEmail(payload);
 
     if (result.success) {
       if (typeof toast === 'function') toast(`✅ Email with PDF sent to ${email}!`, 'success', 5000);
