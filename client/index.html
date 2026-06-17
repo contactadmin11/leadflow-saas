@@ -5089,10 +5089,7 @@ async function _sendEmailWithPDF(email,name,subject,message,type,id){
     }
   }catch(e){
     console.error('Email error:',e);
-    // Fallback to mailto + PDF download
-    _autoDownloadPDF();
-    window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`,'_blank');
-    toast('Email via server failed ('+e.message+') — PDF downloaded, email client opened.\n💡 Check Gmail config in Settings → Email','warning',8000);
+    toast('Email via server failed ('+e.message+')\n💡 Check Gmail config in Settings → Email','error',8000);
   }
 }
 
