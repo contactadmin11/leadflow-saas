@@ -17,8 +17,8 @@ const createTransporter = (settings) => {
   return {
     transporter: nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      port: 587,
+      secure: false, // upgrades to TLS automatically via STARTTLS
       auth: { user: gmailUser, pass: gmailPass },
       connectionTimeout: 10000, // Fail fast after 10s if network blocked
       greetingTimeout: 10000,
