@@ -28,7 +28,9 @@ const settingsSchema = new mongoose.Schema({
   openaiKeyEnc: { type: String, default: '' },
   geminiKeyEnc: { type: String, default: '' },
   perplexKeyEnc:{ type: String, default: '' },
-  // EmailJS
+  // EmailJS & Resend
+  resendKeyEnc: { type: String, default: '' },
+  resendFrom:   { type: String, default: '' },
   ejsService:   { type: String, default: '' },
   ejsTemplate:  { type: String, default: '' },
   ejsPublicKey: { type: String, default: '' },

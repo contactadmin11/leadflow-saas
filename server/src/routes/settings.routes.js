@@ -18,12 +18,13 @@ router.get('/', async (req, res, next) => {
     // Return decrypted versions for display (masked)
     safe.gmailUser = decrypt(settings.gmailUserEnc) || '';
     safe.gmailPass = settings.gmailPassEnc ? '••••••••••••••••' : '';
+    safe.resendKey = settings.resendKeyEnc ? '••••••••••••••••' : '';
     safe.claudeKey = settings.claudeKeyEnc ? '••••••••••••••••' : '';
     safe.openaiKey = settings.openaiKeyEnc ? '••••••••••••••••' : '';
     safe.geminiKey = settings.geminiKeyEnc ? '••••••••••••••••' : '';
     safe.perplexKey= settings.perplexKeyEnc? '••••••••••••••••' : '';
     // Remove encrypted raw fields
-    delete safe.gmailUserEnc; delete safe.gmailPassEnc;
+    delete safe.gmailUserEnc; delete safe.gmailPassEnc; delete safe.resendKeyEnc;
     delete safe.claudeKeyEnc; delete safe.openaiKeyEnc;
     delete safe.geminiKeyEnc; delete safe.perplexKeyEnc;
     res.json({ settings: safe });
@@ -38,12 +39,13 @@ router.put('/', async (req, res, next) => {
 
     const plain = ['bizName','userName','email','phone','address','gstin','pan','state',
       'invPrefix','quotePrefix','currency','upiId','gstEnabled','payTerms',
-      'team','sources','gmailFromName','aiProvider','ejsService','ejsTemplate','ejsPublicKey'];
+      'team','sources','gmailFromName','resendFrom','aiProvider','ejsService','ejsTemplate','ejsPublicKey'];
     plain.forEach(k => { if (s[k] !== undefined) upd[k] = s[k]; });
 
     // Encrypt sensitive fields (only if new value provided and not masked)
     if (s.gmailUser && !s.gmailUser.includes('•')) upd.gmailUserEnc = encrypt(s.gmailUser);
     if (s.gmailPass && !s.gmailPass.includes('•')) upd.gmailPassEnc = encrypt(s.gmailPass);
+    if (s.resendKey && !s.resendKey.includes('•')) upd.resendKeyEnc = encrypt(s.resendKey);
     if (s.claudeKey && !s.claudeKey.includes('•')) upd.claudeKeyEnc = encrypt(s.claudeKey);
     if (s.openaiKey && !s.openaiKey.includes('•')) upd.openaiKeyEnc = encrypt(s.openaiKey);
     if (s.geminiKey && !s.geminiKey.includes('•')) upd.geminiKeyEnc = encrypt(s.geminiKey);

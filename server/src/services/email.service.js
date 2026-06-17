@@ -72,12 +72,10 @@ const withRetry = async (fn, maxRetries = 3, baseDelayMs = 1000) => {
  * @returns {object}          - { success, method }
  */
 const sendEmail = async (settings, toEmail, toName, subject, message, pdfBuffer, pdfName) => {
-  const { transporter, fromEmail, fromName } = createTransporter(settings);
-
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
       <div style="background:#1e3a8a;padding:20px 28px;border-radius:12px 12px 0 0">
-        <h2 style="color:#fff;margin:0">${fromName}</h2>
+        <h2 style="color:#fff;margin:0">${settings.bizName || 'LeadFlow'}</h2>
       </div>
       <div style="background:#f8fafc;padding:24px 28px;border:1px solid #e2e8f0">
         <p style="color:#334155;font-size:15px;line-height:1.7;white-space:pre-line">${message}</p>
@@ -87,6 +85,43 @@ const sendEmail = async (settings, toEmail, toName, subject, message, pdfBuffer,
       </div>
     </div>
   `;
+
+  // --- RESEND API FLOW ---
+  if (settings.resendKeyEnc && settings.resendFrom) {
+    const resendKey = decrypt(settings.resendKeyEnc);
+    const fromStr   = `${settings.gmailFromName || settings.bizName || 'LeadFlow'} <${settings.resendFrom}>`;
+    const payload = {
+      from: fromStr,
+      to: [toEmail],
+      subject: subject,
+      html: html
+    };
+
+    if (pdfBuffer) {
+      payload.attachments = [{
+        filename: pdfName || 'document.pdf',
+        content: pdfBuffer.toString('base64')
+      }];
+    }
+
+    const axios = require('axios');
+    try {
+      await axios.post('https://api.resend.com/emails', payload, {
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      logger.info(`✅ Email sent via Resend → ${toEmail}${pdfBuffer ? ' (with PDF)' : ''}`);
+      return { success: true, method: pdfBuffer ? 'resend_with_pdf' : 'resend_only' };
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message;
+      throw new Error(`Resend API Error: ${msg}`);
+    }
+  }
+
+  // --- GMAIL SMTP FLOW (Fallback) ---
+  const { transporter, fromEmail, fromName } = createTransporter(settings);
 
   const mailOptions = {
     from:    `"${fromName}" <${fromEmail}>`,
@@ -103,7 +138,7 @@ const sendEmail = async (settings, toEmail, toName, subject, message, pdfBuffer,
   // Retry up to 3 times with exponential back-off
   await withRetry(() => transporter.sendMail(mailOptions), 3, 800);
 
-  logger.info(`✅ Email sent → ${toEmail}${pdfBuffer ? ' (with PDF)' : ''}`);
+  logger.info(`✅ Email sent via SMTP → ${toEmail}${pdfBuffer ? ' (with PDF)' : ''}`);
   return { success: true, method: pdfBuffer ? 'email_with_pdf' : 'email_only' };
 };
 
@@ -111,9 +146,10 @@ const sendEmail = async (settings, toEmail, toName, subject, message, pdfBuffer,
  * Send a test email to verify configuration.
  */
 const sendTestEmail = async (settings) => {
+  const toEmail = settings.resendKeyEnc ? settings.resendFrom : decrypt(settings.gmailUserEnc);
   return sendEmail(
     settings,
-    decrypt(settings.gmailUserEnc),
+    toEmail,
     'Test',
     'LeadFlow Email Test ✅',
     'Your email integration is working!\nInvoices will now be sent with PDF auto-attached.\n\n— LeadFlow CRM',
