@@ -200,16 +200,61 @@ if (fs.existsSync(clientPath)) {
   // Serve all static assets (JS, CSS, images) without index
   app.use(express.static(clientPath, { index: false }));
 
-  // Helper: inject secret into any HTML file
+  // Helper: serve HTML with APP_SECRET injected + all inline <script> blocks obfuscated (production only)
+  const htmlCache = {};
+
+  const obfuscateInlineScripts = (html) => {
+    let blockIndex = 0;
+    return html.replace(/<script>([\s\S]*?)<\/script>/g, (match, jsCode) => {
+      blockIndex++;
+      if (!jsCode.trim()) return match;
+      try {
+        const result = JavaScriptObfuscator.obfuscate(jsCode, {
+          compact: true,
+          controlFlowFlattening: false, // keep false for huge inline scripts (performance)
+          deadCodeInjection: false,
+          debugProtection: true,          // breaks DevTools debugger
+          debugProtectionInterval: 4000, // keeps pausing debugger every 4s
+          disableConsoleOutput: true,
+          stringArray: true,
+          stringArrayEncoding: ['base64'],
+          stringArrayThreshold: 0.75,
+          selfDefending: true,            // code resists reformatting/beautifying
+        });
+        return `<script>${result.getObfuscatedCode()}</script>`;
+      } catch (e) {
+        logger.warn(`[Obfuscator] Inline script block ${blockIndex} failed: ${e.message}`);
+        return match; // serve original block if obfuscation fails
+      }
+    });
+  };
+
   const serveHtml = (filename) => (req, res) => {
     const filePath = path.join(clientPath, filename);
     if (!fs.existsSync(filePath)) return res.status(404).send('Page not found');
+
+    // Serve cached obfuscated version in production
+    if (process.env.NODE_ENV === 'production' && htmlCache[filename]) {
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Cache-Control', 'no-store');
+      return res.send(htmlCache[filename]);
+    }
+
     let html = fs.readFileSync(filePath, 'utf-8');
     html = html.replace("window.__APP_SECRET__ || ''", `'${APP_SECRET}'`);
+
+    if (process.env.NODE_ENV === 'production') {
+      logger.info(`[Obfuscator] Obfuscating inline scripts in ${filename}…`);
+      html = obfuscateInlineScripts(html);
+      htmlCache[filename] = html; // cache so next request is instant
+      logger.info(`[Obfuscator] Done — ${filename} is protected.`);
+    }
+
     res.setHeader('Content-Type', 'text/html');
     res.setHeader('Cache-Control', 'no-store');
     res.send(html);
   };
+
 
   // Landing/marketing page at root
   app.get('/', serveHtml('landing.html'));
