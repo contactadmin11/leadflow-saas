@@ -16,12 +16,13 @@ const createTransporter = (settings) => {
 
   return {
     transporter: nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: { user: gmailUser, pass: gmailPass },
-      // Pool connections for better performance under load
-      pool: true,
-      maxConnections: 3,
-      maxMessages: 100
+      connectionTimeout: 10000, // Fail fast after 10s if network blocked
+      greetingTimeout: 10000,
+      socketTimeout: 15000
     }),
     fromEmail: gmailUser,
     fromName:  settings.gmailFromName || settings.bizName || 'LeadFlow'
