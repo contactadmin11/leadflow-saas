@@ -4041,23 +4041,17 @@ async function msgSendNext(){
   if(msgChannel==='whatsapp'||msgChannel==='both'){
     if(c.phone){
       const ph=c.phone.replace(/\D/g,'');
-      if(typeof API!=='undefined'&&API.isLoggedIn()){
-        try{
-          const res = await API.sendWA({phone:ph, message:rendered});
-          if(res&&res.success){
-            waOk=true;
-            msgLogLine('  💬 Server WA sent silently → '+c.phone,'lg-ok');
-          }else{
-            throw new Error(res.error||'Server WA failed');
-          }
-        }catch(err){
-          msgLogLine('  ⚠️ Server WA failed ('+err.message+') — falling back to browser tab','lg-wn');
-          try{
-            window.open('https://web.whatsapp.com/send?phone='+ph+'&text='+encodeURIComponent(rendered),'whatsapp_web_tab');
-            waOk=true;
-            msgLogLine('  💬 WhatsApp tab opened → '+c.phone,'lg-ok');
-          }catch(e){msgLogLine('  ❌ WA open failed: '+e.message,'lg-er');}
+      try{
+        const res = await API.sendWA({phone:ph, message:rendered});
+        if(res&&res.success){
+          waOk=true;
+          msgLogLine('  💬 WA sent → '+c.phone,'lg-ok');
+        }else{
+          throw new Error(res.error||'Server WA failed');
         }
+      }catch(err){
+        msgLogLine('  ❌ WA failed: '+err.message+' (Is WhatsApp connected in Settings?)','lg-er');
+        ok=false;
       }
     }else{
       msgLogLine('  ⚠️ No phone number — WhatsApp skipped','lg-wn');
@@ -5000,9 +4994,7 @@ async function _sendViaLocalServer(phone,message,type,id,toEmail='',toName='',su
   }catch(e){
     console.error('Node server error:',e);
     if(statusEl)statusEl.innerHTML=`<span style="color:#ef4444">❌ ${e.message}</span>`;
-    toast('WA send failed: '+e.message,'error',5000);
-    // Fallback: same-browser tab
-    await _sendViaSameBrowserWA(phone,message,type,id);
+    toast('WA send failed: '+e.message+' — Go to Settings → WhatsApp to check connection.','error',6000);
   }
 }
 
