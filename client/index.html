@@ -1216,27 +1216,15 @@ Sunita Joshi, 9876543213, sunita@joshi.com, Joshi Industries, LinkedIn"></textar
     <!-- EMAIL PROVIDER SETTINGS -->
     <div class="card" style="grid-column:1/-1">
       <div class="card-title"><i class="fas fa-envelope" style="color:#3b82f6"></i> Email Auto-Send with PDF</div>
-      
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#1e40af"><i class="fas fa-bolt"></i> Recommended: Resend API (Free & Cloud-Safe)</div>
-      <div style="font-size:12px;color:#64748b;margin-bottom:12px">Bypasses Render's firewall completely. Requires a custom domain.</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-        <div class="form-group"><label>Resend API Key</label><input type="password" id="setResendKey" placeholder="re_..."></div>
-        <div class="form-group"><label>Resend 'From' Email</label><input type="email" id="setResendFrom" placeholder="sales@yourdomain.com"></div>
-      </div>
-
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#92400e"><i class="fab fa-google"></i> Fallback: Gmail App Password (SMTP)</div>
-      <div style="font-size:12px;color:#64748b;margin-bottom:12px">Blocked by Render Free Tier firewall. Only works locally or on paid Render plan.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
         <div class="form-group"><label>Gmail Address</label><input type="email" id="setGmailUser" placeholder="yourname@gmail.com"></div>
         <div class="form-group"><label>Gmail App Password <span style="color:#94a3b8;font-size:11px">(16 digits)</span></label><input type="password" id="setGmailPass" placeholder="xxxx xxxx xxxx xxxx"></div>
         <div class="form-group"><label>Sender Name</label><input type="text" id="setGmailFromName" placeholder="Your Company Name"></div>
       </div>
-
       <div style="display:flex;gap:10px">
         <button class="btn btn-primary btn-sm" onclick="saveGmailConfig()"><i class="fas fa-save"></i> Save Email Config</button>
         <button class="btn btn-secondary btn-sm" onclick="testGmailEmail()"><i class="fas fa-envelope"></i> Send Test Email</button>
-        <a href="https://resend.com" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-external-link-alt"></i> Get Resend Key</a>
-        <a href="https://myaccount.google.com/apppasswords" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-external-link-alt"></i> Get Gmail Password</a>
+        <a href="https://myaccount.google.com/apppasswords" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-external-link-alt"></i> Get App Password</a>
       </div>
     </div>
     <!-- AI PROVIDER SETTINGS CARD -->
@@ -3043,9 +3031,7 @@ function loadSettings(){
   // Load mobile number from logged-in user profile
   if(typeof API!=='undefined'&&API.getUser){const u=API.getUser();if(u?.mobile){const mob=document.getElementById('setMobile');if(mob)mob.value=u.mobile;}}
   S('setEjsService',settings.ejsService||'');S('setEjsTemplate',settings.ejsTemplate||'');S('setEjsPublicKey',settings.ejsPublicKey||'');
-  S('setResendKey',settings.resendKey||'');S('setResendFrom',settings.resendFrom||'');
   S('setGmailUser',settings.gmailUser||'');S('setGmailPass',settings.gmailPass||'');S('setGmailFromName',settings.gmailFromName||settings.bizName||'');
-  S('setResendKey',settings.resendKey||'');S('setResendFrom',settings.resendFrom||'');
   S('setClaudeKey',settings.claudeApiKey||'');S('setOpenAIKey',settings.openaiApiKey||'');S('setGeminiKey',settings.geminiApiKey||'');S('setPerplexityKey',settings.perplexityApiKey||'');
   const provEl=document.getElementById('setAIProvider');if(provEl){provEl.value=settings.aiProvider||'local';onAIProviderChange();}
   if(document.getElementById('setSellerState'))document.getElementById('setSellerState').value=settings.state||'';
@@ -4978,7 +4964,7 @@ async function _sendViaLocalServer(phone,message,type,id,toEmail='',toName='',su
       }
     }
     if(channel==='email'||channel==='both'){
-      await _sendEmailResend(toEmail,toName,subject,message,type,id);
+      await _sendEmailWithPDF(toEmail,toName,subject,message,type,id);
     }
   }catch(e){
     console.error('Node server error:',e);
@@ -5024,58 +5010,7 @@ function _showWAGuide(fname){
   setTimeout(()=>{if(d.parentNode)d.remove();},12000);
 }
 
-// ── EMAIL via Resend.com (3000/month free, real PDF attachment) ──
-async function _sendEmailResend(email,name,subject,message,type,id){
-  if(!email)return;
-  if(!_sdPdfResult)_sdPdfResult=await buildDocPDF(type,id);
-  if(settings.resendKey&&settings.resendFrom){
-    try{
-      const res=await fetch('https://api.resend.com/emails',{
-        method:'POST',
-        headers:{'Authorization':`Bearer ${settings.resendKey}`,'Content-Type':'application/json'},
-        body:JSON.stringify({
-          from:settings.resendFrom,
-          to:[email],
-          subject,
-          html:`<div style="font-family:Arial,sans-serif;max-width:600px">
-            <div style="background:#1e3a8a;padding:20px 24px;border-radius:10px 10px 0 0">
-              <h2 style="color:#fff;margin:0">${settings.bizName||'Us'}</h2>
-            </div>
-            <div style="background:#f8fafc;padding:24px;border:1px solid #e2e8f0;border-radius:0 0 10px 10px">
-              <p style="white-space:pre-line;color:#334155">${message}</p>
-            </div>
-          </div>`,
-          attachments:[{
-            filename:_sdPdfResult.fname,
-            content:_sdPdfResult.base64  // Resend accepts base64 directly
-          }]
-        })
-      });
-      const data=await res.json();
-      if(res.ok&&data.id){
-        toast(`✅ Email with PDF sent to ${email}!`,'success',5000);
-      }else{
-        throw new Error(data.message||data.name||'Resend error');
-      }
-    }catch(e){
-      console.error('Resend error:',e);
-      toast('Resend failed: '+e.message+' — falling back to mailto','warning',5000);
-      _autoDownloadPDF();
-      window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`,'_blank');
-    }
-  }else{
-    // Fallback if no Resend key
-    _autoDownloadPDF();
-    window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`,'_blank');
-    toast('📥 PDF downloaded + email client opened\n💡 Add Resend API key in Settings for auto-attach!','info',7000);
-  }
-}
-// Alias for legacy calls
-
 // ── EMAIL via Node.js server (Nodemailer + Gmail, real PDF attachment) ──
-async function _sendEmailResend(email,name,subject,message,type,id){
-  return _sendEmailWithPDF(email,name,subject,message,type,id);
-}
 async function _sendEmailWithPDF(email,name,subject,message,type,id){
   if(!email){toast('Email address required','warning');return;}
   const trimmedEmail = email.trim();
