@@ -4000,7 +4000,7 @@ function msgStart(){
   msgLogLine('━'.repeat(50),'lg-in');
   msgSendNext();
 }
-function msgSendNext(){
+async function msgSendNext(){
   const queue=window._msgCurrentQueue||msgContacts;
   if(!msgSending||msgSendIdx>=queue.length){msgFinish();return;}
   const i=msgSendIdx,c=queue[i];
@@ -4018,74 +4018,96 @@ function msgSendNext(){
   msgLogLine('','');
   msgLogLine(`[${i+1}/${queue.length}] Processing: ${c.name} ${c.company?'('+c.company+')':''}`, 'lg-in');
   let ok=true, waOk=false, emOk=false;
-  // ── WhatsApp ── (always opens web.whatsapp.com, reuses whatsapp_web_tab)
+  
+  if(dry){
+    if(msgChannel==='whatsapp'||msgChannel==='both'){
+      if(c.phone){msgLogLine('  ✅ [DRY RUN] WA → '+c.phone,'lg-ok');waOk=true;}
+      else{msgLogLine('  ⚠️ No phone number — WhatsApp skipped','lg-wn');if(msgChannel==='whatsapp')ok=false;}
+    }
+    if(msgChannel==='email'||msgChannel==='both'){
+      if(c.email){msgLogLine('  ✅ [DRY RUN] Email → '+c.email,'lg-ok');emOk=true;}
+      else{msgLogLine('  ⚠️ No email address — Email skipped','lg-wn');if(msgChannel==='email')ok=false;}
+    }
+    const finalStatus=dry?'🧪 Dry Run':(!ok?'❌ Skipped':(waOk||emOk)?'✅ Sent':'⚠️ Partial');
+    msgResults.push({name:c.name,phone:c.phone||'',email:c.email||'',company:c.company||'',channel:msgChannel,status:finalStatus,time:new Date().toLocaleTimeString()});
+    if(qi){qi.classList.remove('qi-run');qi.classList.add('qi-ok');const st=document.getElementById('qi-st-'+i);if(st)st.textContent=finalStatus;}
+    msgSendIdx++;
+    setTimeout(msgSendNext,400);
+    return;
+  }
+
+  // ── Real Send ──
+  // WhatsApp
   if(msgChannel==='whatsapp'||msgChannel==='both'){
     if(c.phone){
       const ph=c.phone.replace(/\D/g,'');
-      const waURL='https://web.whatsapp.com/send?phone='+ph+'&text='+encodeURIComponent(rendered);
-      if(dry){msgLogLine('  ✅ [DRY RUN] WA → '+c.phone,'lg-ok');waOk=true;}
-      else{
-        try{window.open(waURL,'whatsapp_web_tab');waOk=true;msgLogLine('  💬 WhatsApp tab opened → '+c.phone,'lg-ok');}
-        catch(err){msgLogLine('  ❌ WA open failed: '+err.message,'lg-er');}
+      if(typeof API!=='undefined'&&API.isLoggedIn()){
+        try{
+          const res = await API.sendWA({phone:ph, message:rendered});
+          if(res&&res.success){
+            waOk=true;
+            msgLogLine('  💬 Server WA sent silently → '+c.phone,'lg-ok');
+          }else{
+            throw new Error(res.error||'Server WA failed');
+          }
+        }catch(err){
+          msgLogLine('  ⚠️ Server WA failed ('+err.message+') — falling back to browser tab','lg-wn');
+          try{
+            window.open('https://web.whatsapp.com/send?phone='+ph+'&text='+encodeURIComponent(rendered),'whatsapp_web_tab');
+            waOk=true;
+            msgLogLine('  💬 WhatsApp tab opened → '+c.phone,'lg-ok');
+          }catch(e){msgLogLine('  ❌ WA open failed: '+e.message,'lg-er');}
+        }
       }
     }else{
       msgLogLine('  ⚠️ No phone number — WhatsApp skipped','lg-wn');
       if(msgChannel==='whatsapp')ok=false;
     }
   }
-  // ── Email ── (use backend API if logged in for real send; else mailto fallback)
+
+  // Email
   if(msgChannel==='email'||msgChannel==='both'){
     if(c.email){
-      if(dry){msgLogLine('  ✅ [DRY RUN] Email → '+c.email,'lg-ok');emOk=true;msgSendIdx++;setTimeout(msgSendNext,(dry?400:delay*1000));return;}
-      // Try backend API first (sends via Gmail with real delivery)
-      const emailDelay=waOk&&msgChannel==='both'?1200:50;
-      setTimeout(async()=>{
-        let apiSent=false;
-        if(typeof API!=='undefined'&&API.isLoggedIn()){
-          try{
-            const res=await API.sendEmail({toEmail:c.email,toName:c.name||c.email,subject:rendSubj,message:rendered});
-            if(res&&res.success){
-              emOk=true;apiSent=true;
-              msgLogLine('  📧 Email sent via server → '+c.email,'lg-ok');
-            }else{
-              throw new Error((res&&res.error)||'Server email failed');
-            }
-          }catch(err){
-            msgLogLine('  ⚠️ Server email failed ('+err.message+') — falling back to mailto','lg-wn');
+      let apiSent=false;
+      if(typeof API!=='undefined'&&API.isLoggedIn()){
+        try{
+          const res=await API.sendEmail({toEmail:c.email,toName:c.name||c.email,subject:rendSubj,message:rendered});
+          if(res&&res.success){
+            emOk=true;apiSent=true;
+            msgLogLine('  📧 Email sent via server → '+c.email,'lg-ok');
+          }else{
+            throw new Error((res&&res.error)||'Server email failed');
           }
+        }catch(err){
+          msgLogLine('  ⚠️ Server email failed ('+err.message+') — falling back to mailto','lg-wn');
         }
-        if(!apiSent){
-          // Fallback: open mailto in iframe
-          try{
-            const mailURL='mailto:'+c.email+'?subject='+encodeURIComponent(rendSubj)+'&body='+encodeURIComponent(rendered);
-            const frame=document.createElement('iframe');
-            frame.style.cssText='display:none;width:0;height:0;border:0';
-            document.body.appendChild(frame);
-            setTimeout(()=>{try{frame.contentWindow.location.href=mailURL;}catch(e){window.open(mailURL,'_self');}setTimeout(()=>frame.remove(),3000);},50);
-            emOk=true;
-            msgLogLine('  📧 Email client opened (mailto) → '+c.email,'lg-ok');
-          }catch(err){msgLogLine('  ❌ Email failed: '+err.message,'lg-er');}
-        }
-        const finalStatus2=(!ok?'❌ Skipped':(waOk||emOk)?'✅ Sent':'⚠️ Partial');
-        msgResults.push({name:c.name,phone:c.phone||'',email:c.email||'',company:c.company||'',channel:msgChannel,status:finalStatus2,time:new Date().toLocaleTimeString()});
-        if(qi){qi.classList.remove('qi-run');qi.classList.add(finalStatus2.includes('✅')?'qi-ok':'qi-fail');const st=document.getElementById('qi-st-'+i);if(st)st.textContent=finalStatus2;}
-        msgSendIdx++;setTimeout(msgSendNext,delay*1000);
-      },emailDelay);
-      return; // async path handles increment+next
+      }
+      if(!apiSent){
+        try{
+          const mailURL='mailto:'+c.email+'?subject='+encodeURIComponent(rendSubj)+'&body='+encodeURIComponent(rendered);
+          const frame=document.createElement('iframe');
+          frame.style.cssText='display:none;width:0;height:0;border:0';
+          document.body.appendChild(frame);
+          setTimeout(()=>{try{frame.contentWindow.location.href=mailURL;}catch(e){window.open(mailURL,'_self');}setTimeout(()=>frame.remove(),3000);},50);
+          emOk=true;
+          msgLogLine('  📧 Email client opened (mailto) → '+c.email,'lg-ok');
+        }catch(err){msgLogLine('  ❌ Email failed: '+err.message,'lg-er');}
+      }
     }else{
       msgLogLine('  ⚠️ No email address — Email skipped','lg-wn');
       if(msgChannel==='email')ok=false;
     }
   }
-  const finalStatus=dry?'🧪 Dry Run':(!ok?'❌ Skipped':(waOk||emOk)?'✅ Sent':'⚠️ Partial');
+
+  const finalStatus=(!ok?'❌ Skipped':(waOk||emOk)?'✅ Sent':'⚠️ Partial');
   msgResults.push({name:c.name,phone:c.phone||'',email:c.email||'',company:c.company||'',channel:msgChannel,status:finalStatus,time:new Date().toLocaleTimeString()});
   if(qi){
     qi.classList.remove('qi-run');
-    qi.classList.add(finalStatus.includes('✅')||finalStatus.includes('🧪')?'qi-ok':finalStatus.includes('❌')?'qi-fail':'qi-fail');
+    qi.classList.add(finalStatus.includes('✅')?'qi-ok':'qi-fail');
     const st=document.getElementById('qi-st-'+i);if(st)st.textContent=finalStatus;
   }
   msgSendIdx++;
-  setTimeout(msgSendNext,(dry?400:delay*1000));
+  setTimeout(msgSendNext,delay*1000);
 }
 function msgFinish(){
   msgSending=false;
