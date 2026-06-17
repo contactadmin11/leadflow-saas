@@ -41,6 +41,7 @@ const { verifyAppSecret, originGuard } = require('./middleware/protect');
 const { protect }       = require('./middleware/auth');
 const { subscriptionGuard } = require('./middleware/subscriptionGuard');
 const subscriptionRoutes = require('./routes/subscription.routes');
+const { restoreAllSessions } = require('./services/whatsapp.service');
 
 const app = express();
 
@@ -254,6 +255,8 @@ async function startApp() {
         retryReads: true
       });
       logger.info('✅ MongoDB connected: ' + mongoose.connection.name);
+      // Restore all WhatsApp sessions from MongoDB (so users don't need to re-scan QR)
+      restoreAllSessions().catch(e => logger.warn('[WA] Session restore error:', e.message));
     } catch (err) {
       logger.error('❌ MongoDB connection failed:', err.message);
       logger.warn('⚠️  Server starting without DB. Will retry on first request.');

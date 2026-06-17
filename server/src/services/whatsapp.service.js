@@ -1,51 +1,114 @@
 /**
  * WhatsApp Service using @whiskeysockets/baileys
- * Lightweight — does NOT require Chromium/puppeteer.
- * Perfect for free-tier cloud servers (256MB RAM).
- * 
- * Per-user WhatsApp sessions stored in memory (for free tier)
- * or on disk for persistence.
+ * ─────────────────────────────────────────────
+ * Sessions are stored in MongoDB (not disk) so they survive Render restarts.
+ * Users only need to scan QR ONCE — after that the session auto-reconnects.
  */
 
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
-const { Boom } = require('@hapi/boom');
-const path     = require('path');
-const fs       = require('fs');
-const qrcode   = require('qrcode');
-const logger   = require('../config/logger');
+const {
+  default: makeWASocket,
+  DisconnectReason,
+  fetchLatestBaileysVersion,
+  BufferJSON,
+  initAuthCreds,
+  proto
+} = require('@whiskeysockets/baileys');
+const { Boom }  = require('@hapi/boom');
+const qrcode    = require('qrcode');
+const logger    = require('../config/logger');
+const WaSession = require('../models/WaSession');
 
-// In-memory store of active WA sessions, keyed by userId
+// In-memory store of active WA sockets, keyed by userId
 const sessions = new Map();
-// { userId: { sock, status, qr, qrBase64 } }
 
-const SESSION_DIR = path.join(__dirname, '..', '..', 'wa_sessions');
-if (!fs.existsSync(SESSION_DIR)) fs.mkdirSync(SESSION_DIR, { recursive: true });
+/* ─── MongoDB-backed auth state ─────────────────────────────────────────── */
+
+/**
+ * Replicates useMultiFileAuthState but reads/writes to MongoDB.
+ * Each file is stored as a WaSession document with key = "userId:filename".
+ */
+const useMongoAuthState = async (userId) => {
+  const prefix = `${userId}:`;
+
+  const readData = async (file) => {
+    const doc = await WaSession.findOne({ key: prefix + file }).lean();
+    if (!doc) return null;
+    return JSON.parse(doc.data, BufferJSON.reviver);
+  };
+
+  const writeData = async (file, data) => {
+    const value = JSON.stringify(data, BufferJSON.replacer);
+    await WaSession.findOneAndUpdate(
+      { key: prefix + file },
+      { $set: { data: value, updatedAt: new Date() } },
+      { upsert: true }
+    );
+  };
+
+  const removeData = async (file) => {
+    await WaSession.deleteOne({ key: prefix + file });
+  };
+
+  // Load or init creds
+  const creds = (await readData('creds')) || initAuthCreds();
+
+  return {
+    state: {
+      creds,
+      keys: {
+        get: async (type, ids) => {
+          const data = {};
+          await Promise.all(ids.map(async (id) => {
+            let value = await readData(`${type}-${id}`);
+            if (type === 'app-state-sync-key' && value) {
+              value = proto.Message.AppStateSyncKeyData.fromObject(value);
+            }
+            data[id] = value;
+          }));
+          return data;
+        },
+        set: async (data) => {
+          const tasks = [];
+          for (const category of Object.keys(data)) {
+            for (const id of Object.keys(data[category])) {
+              const value = data[category][id];
+              const file  = `${category}-${id}`;
+              tasks.push(value ? writeData(file, value) : removeData(file));
+            }
+          }
+          await Promise.all(tasks);
+        }
+      }
+    },
+    saveCreds: () => writeData('creds', creds)
+  };
+};
+
+/* ─── Session management ─────────────────────────────────────────────────── */
+
+const baileysLogger = {
+  level: 'silent',
+  trace: () => {}, debug: () => {}, info: () => {},
+  warn:  () => {}, error: () => {}, fatal: () => {},
+  child: () => baileysLogger
+};
 
 /**
  * Initialize a WhatsApp session for a user.
- * Returns a QR code base64 string or 'connected' status.
+ * If credentials already exist in MongoDB, reconnects automatically (no QR).
+ * If not, returns a QR code for the user to scan.
  */
 const initSession = async (userId) => {
-  // If already connected, return status
+  // If already connected in memory, skip
   const existing = sessions.get(userId);
   if (existing?.status === 'connected') {
     return { status: 'connected', phone: existing.phone };
   }
 
-  const authDir = path.join(SESSION_DIR, userId);
-  const { state, saveCreds } = await useMultiFileAuthState(authDir);
+  const { state, saveCreds } = await useMongoAuthState(userId);
   const { version } = await fetchLatestBaileysVersion();
 
   return new Promise((resolve) => {
-    // Baileys requires a Pino-compatible logger with .child() method
-    // Using a silent stub so it doesn't flood logs
-    const baileysLogger = {
-      level: 'silent',
-      trace: () => {}, debug: () => {}, info: () => {},
-      warn:  () => {}, error: () => {}, fatal: () => {},
-      child: () => baileysLogger   // ← .child() is required by Baileys
-    };
-
     const sock = makeWASocket({
       version,
       auth: state,
@@ -63,20 +126,19 @@ const initSession = async (userId) => {
       if (!session) return;
 
       if (qr) {
-        // New QR code generated
         const qrBase64 = await qrcode.toDataURL(qr);
-        session.status  = 'waiting_qr';
-        session.qr      = qr;
+        session.status   = 'waiting_qr';
+        session.qr       = qr;
         session.qrBase64 = qrBase64;
         logger.info(`[WA] QR generated for user ${userId}`);
         resolve({ status: 'waiting_qr', qrBase64 });
       }
 
       if (connection === 'open') {
-        session.status  = 'connected';
-        session.qr      = null;
+        session.status   = 'connected';
+        session.qr       = null;
         session.qrBase64 = null;
-        session.phone   = sock.user?.id?.split(':')[0];
+        session.phone    = sock.user?.id?.split(':')[0];
         logger.info(`[WA] Connected for user ${userId}: ${session.phone}`);
         resolve({ status: 'connected', phone: session.phone });
       }
@@ -86,13 +148,15 @@ const initSession = async (userId) => {
         logger.warn(`[WA] Disconnected for user ${userId}, reason: ${reason}`);
 
         if (reason === DisconnectReason.loggedOut) {
-          // User logged out — clear session
+          // User explicitly logged out — delete credentials from MongoDB too
           sessions.delete(userId);
-          try { fs.rmSync(authDir, { recursive: true, force: true }); } catch {}
           session.status = 'logged_out';
+          await WaSession.deleteMany({ key: new RegExp(`^${userId}:`) });
+          logger.info(`[WA] Session credentials wiped for user ${userId}`);
         } else {
-          // Reconnect
+          // Network drop / Render restart — reconnect using stored credentials
           session.status = 'reconnecting';
+          logger.info(`[WA] Auto-reconnecting for user ${userId} in 5s…`);
           setTimeout(() => initSession(userId).catch(() => {}), 5000);
         }
       }
@@ -100,23 +164,44 @@ const initSession = async (userId) => {
   });
 };
 
+/* ─── Auto-restore sessions on server boot ───────────────────────────────── */
+
 /**
- * Get current WhatsApp status for a user.
+ * Called once on startup to reconnect all users who had active sessions.
+ * This means after a Render restart, users automatically reconnect without QR.
  */
+const restoreAllSessions = async () => {
+  try {
+    // Find all unique userIds that have saved credentials
+    const docs = await WaSession.find({ key: /^.*:creds$/ }).lean();
+    const userIds = docs.map(d => d.key.replace(/:creds$/, ''));
+    logger.info(`[WA] Restoring ${userIds.length} session(s) from MongoDB…`);
+    for (const userId of userIds) {
+      try {
+        await initSession(userId);
+        logger.info(`[WA] Restored session for ${userId}`);
+      } catch (e) {
+        logger.warn(`[WA] Failed to restore session for ${userId}: ${e.message}`);
+      }
+    }
+  } catch (err) {
+    logger.error('[WA] restoreAllSessions error:', err.message);
+  }
+};
+
+/* ─── Status / disconnect ────────────────────────────────────────────────── */
+
 const getStatus = (userId) => {
   const session = sessions.get(userId);
   if (!session) return { status: 'not_initialized', ready: false };
   return {
-    status: session.status,
-    ready:  session.status === 'connected',
-    phone:  session.phone || null,
+    status:   session.status,
+    ready:    session.status === 'connected',
+    phone:    session.phone || null,
     qrBase64: session.qrBase64 || null
   };
 };
 
-/**
- * Disconnect and clear WhatsApp session for a user.
- */
 const disconnectSession = async (userId) => {
   const session = sessions.get(userId);
   if (session?.sock) {
@@ -124,14 +209,13 @@ const disconnectSession = async (userId) => {
     try { session.sock.end(); } catch {}
   }
   sessions.delete(userId);
-  const authDir = path.join(SESSION_DIR, userId);
-  try { fs.rmSync(authDir, { recursive: true, force: true }); } catch {}
+  // Remove all credential documents for this user from MongoDB
+  await WaSession.deleteMany({ key: new RegExp(`^${userId}:`) });
+  logger.info(`[WA] Session disconnected and credentials deleted for ${userId}`);
 };
 
-/**
- * Format phone number for WhatsApp JID.
- * Handles Indian numbers (10-digit → prepend 91).
- */
+/* ─── Phone formatter ────────────────────────────────────────────────────── */
+
 const formatPhone = (phone) => {
   let p = String(phone).replace(/[\s\-\+\(\)]/g, '');
   if (p.length === 10) p = '91' + p;
@@ -139,15 +223,8 @@ const formatPhone = (phone) => {
   return p;
 };
 
-/**
- * Send a WhatsApp message with optional PDF attachment.
- * @param {string} userId    - User's ID (for session lookup)
- * @param {string} phone     - Recipient phone number
- * @param {string} message   - Message text
- * @param {Buffer} pdfBuffer - Optional PDF buffer
- * @param {string} pdfName   - PDF filename
- * @returns {object}         - { success, method }
- */
+/* ─── Send message ───────────────────────────────────────────────────────── */
+
 const sendMessage = async (userId, phone, message, pdfBuffer, pdfName) => {
   const session = sessions.get(userId);
   if (!session || session.status !== 'connected') {
@@ -157,14 +234,13 @@ const sendMessage = async (userId, phone, message, pdfBuffer, pdfName) => {
   const jid = formatPhone(phone);
 
   try {
-    // ── Simulate typing to prevent bans ──
+    // Simulate typing to look human and prevent bans
     await session.sock.sendPresenceUpdate('composing', jid);
-    const typingTime = Math.min(Math.max((message || '').length * 30, 1500), 4000); // 1.5s - 4s
+    const typingTime = Math.min(Math.max((message || '').length * 30, 1500), 4000);
     await new Promise(resolve => setTimeout(resolve, typingTime));
     await session.sock.sendPresenceUpdate('paused', jid);
 
     if (pdfBuffer && pdfBuffer.length > 10) {
-      // Send PDF as document with caption
       await session.sock.sendMessage(jid, {
         document: pdfBuffer,
         fileName: pdfName || 'document.pdf',
@@ -174,7 +250,6 @@ const sendMessage = async (userId, phone, message, pdfBuffer, pdfName) => {
       logger.info(`[WA] PDF sent → ${phone}`);
       return { success: true, method: 'pdf_attached', phone };
     } else {
-      // Send text only
       await session.sock.sendMessage(jid, { text: message });
       logger.info(`[WA] Text sent → ${phone}`);
       return { success: true, method: 'text_only', phone };
@@ -185,9 +260,8 @@ const sendMessage = async (userId, phone, message, pdfBuffer, pdfName) => {
   }
 };
 
-/**
- * Send bulk WhatsApp messages with delay between each.
- */
+/* ─── Bulk send ──────────────────────────────────────────────────────────── */
+
 const sendBulk = async (userId, batch, delaySeconds = 5) => {
   const results = [];
   for (let i = 0; i < batch.length; i++) {
@@ -204,4 +278,4 @@ const sendBulk = async (userId, batch, delaySeconds = 5) => {
   return { results, total: batch.length, success: ok };
 };
 
-module.exports = { initSession, getStatus, disconnectSession, sendMessage, sendBulk };
+module.exports = { initSession, getStatus, disconnectSession, sendMessage, sendBulk, restoreAllSessions };
