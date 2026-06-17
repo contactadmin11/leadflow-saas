@@ -159,19 +159,21 @@ if (fs.existsSync(clientPath)) {
   // In-memory cache for obfuscated files
   const obfuscatedCache = {};
 
-  // Obfuscate JS files on the fly in production
+  // Obfuscate JS files — always, unless DISABLE_OBFUSCATION=true (set that in local .env only)
+  const SKIP_OBF = process.env.DISABLE_OBFUSCATION === 'true';
+
   app.get('/js/:file', (req, res, next) => {
-    if (process.env.NODE_ENV !== 'production') return next();
-    
     const filename = req.params.file;
     if (!filename.endsWith('.js')) return next();
-    
+
+    if (SKIP_OBF) return next(); // local dev shortcut
+
     if (obfuscatedCache[filename]) {
       res.setHeader('Content-Type', 'application/javascript');
-      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
       return res.send(obfuscatedCache[filename]);
     }
-    
+
     const filepath = path.join(clientPath, 'js', filename);
     if (fs.existsSync(filepath)) {
       try {
@@ -180,14 +182,16 @@ if (fs.existsSync(clientPath)) {
           compact: true,
           controlFlowFlattening: true,
           deadCodeInjection: false,
-          debugProtection: false,
+          debugProtection: true,
+          debugProtectionInterval: 4000,
           disableConsoleOutput: true,
           stringArray: true,
           stringArrayEncoding: ['base64'],
+          selfDefending: true,
         });
         obfuscatedCache[filename] = obfuscationResult.getObfuscatedCode();
         res.setHeader('Content-Type', 'application/javascript');
-        res.setHeader('Cache-Control', 'public, max-age=31536000');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
         return res.send(obfuscatedCache[filename]);
       } catch(err) {
         logger.error('Obfuscation error for ' + filename + ': ' + err.message);
@@ -233,8 +237,8 @@ if (fs.existsSync(clientPath)) {
     const filePath = path.join(clientPath, filename);
     if (!fs.existsSync(filePath)) return res.status(404).send('Page not found');
 
-    // Serve cached obfuscated version in production
-    if (process.env.NODE_ENV === 'production' && htmlCache[filename]) {
+    // Serve cached obfuscated version (always, unless DISABLE_OBFUSCATION=true)
+    if (!SKIP_OBF && htmlCache[filename]) {
       res.setHeader('Content-Type', 'text/html');
       res.setHeader('Cache-Control', 'no-store');
       return res.send(htmlCache[filename]);
@@ -243,10 +247,10 @@ if (fs.existsSync(clientPath)) {
     let html = fs.readFileSync(filePath, 'utf-8');
     html = html.replace("window.__APP_SECRET__ || ''", `'${APP_SECRET}'`);
 
-    if (process.env.NODE_ENV === 'production') {
+    if (!SKIP_OBF) {
       logger.info(`[Obfuscator] Obfuscating inline scripts in ${filename}…`);
       html = obfuscateInlineScripts(html);
-      htmlCache[filename] = html; // cache so next request is instant
+      htmlCache[filename] = html; // cache — next request is instant
       logger.info(`[Obfuscator] Done — ${filename} is protected.`);
     }
 
