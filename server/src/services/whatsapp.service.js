@@ -157,6 +157,12 @@ const sendMessage = async (userId, phone, message, pdfBuffer, pdfName) => {
   const jid = formatPhone(phone);
 
   try {
+    // ── Simulate typing to prevent bans ──
+    await session.sock.sendPresenceUpdate('composing', jid);
+    const typingTime = Math.min(Math.max((message || '').length * 30, 1500), 4000); // 1.5s - 4s
+    await new Promise(resolve => setTimeout(resolve, typingTime));
+    await session.sock.sendPresenceUpdate('paused', jid);
+
     if (pdfBuffer && pdfBuffer.length > 10) {
       // Send PDF as document with caption
       await session.sock.sendMessage(jid, {

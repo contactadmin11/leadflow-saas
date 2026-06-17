@@ -4107,7 +4107,16 @@ async function msgSendNext(){
     const st=document.getElementById('qi-st-'+i);if(st)st.textContent=finalStatus;
   }
   msgSendIdx++;
-  setTimeout(msgSendNext,delay*1000);
+  
+  let actualDelay = delay;
+  if(!dry && (msgChannel==='whatsapp'||msgChannel==='both')){
+    actualDelay = Math.floor(Math.random() * (10 - 5 + 1) + 5); // Random between 5 and 10
+    if(msgSendIdx < queue.length) {
+      msgLogLine(`  ⏳ Waiting ${actualDelay} seconds before next message...`, 'lg-wn');
+    }
+  }
+  
+  setTimeout(msgSendNext, actualDelay*1000);
 }
 function msgFinish(){
   msgSending=false;
