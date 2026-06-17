@@ -393,12 +393,6 @@ window._sendEmailWithPDF = async function(email, name, subject, message, type, i
       if (typeof toast === 'function') toast('Email failed: ' + errMsg, 'error', 5000);
     }
 
-    // Fallback — open mailto so the user can still send manually
-    if (typeof _autoDownloadPDF === 'function') _autoDownloadPDF();
-    setTimeout(() => {
-      window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`, '_blank');
-    }, 500);
-
     throw e;
   }
 };

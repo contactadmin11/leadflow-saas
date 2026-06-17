@@ -2,6 +2,9 @@ const nodemailer = require('nodemailer');
 const { decrypt }  = require('./crypto.service');
 const logger       = require('../config/logger');
 
+// Force IPv4 resolution to prevent connection timeouts on Render due to IPv6 blackholing
+require('dns').setDefaultResultOrder('ipv4first');
+
 /**
  * Create a Nodemailer transporter from decrypted user settings.
  * Uses Gmail with App Password (SMTP). OAuth2 can be added later via env vars.
@@ -20,9 +23,12 @@ const createTransporter = (settings) => {
       port: 587,
       secure: false, // upgrades to TLS automatically via STARTTLS
       auth: { user: gmailUser, pass: gmailPass },
-      connectionTimeout: 10000, // Fail fast after 10s if network blocked
-      greetingTimeout: 10000,
-      socketTimeout: 15000
+      tls: {
+        rejectUnauthorized: false // Bypass strict cert issues on some hosts
+      },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000
     }),
     fromEmail: gmailUser,
     fromName:  settings.gmailFromName || settings.bizName || 'LeadFlow'
