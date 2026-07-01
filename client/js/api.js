@@ -132,6 +132,7 @@ const API = {
       if (refreshed) return this._request(method, path, body, false);
       else {
         this.clearSession();
+        alert('Your security session expired (old 15-minute token detected). Please log back in to get your new permanent 7-day session!');
         window.location.href = '/';
         return;
       }
