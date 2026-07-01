@@ -23,12 +23,30 @@ const { _createTrial } = require('./subscription.routes');
 const router        = express.Router();
 
 const REFRESH_COOKIE = 'lf_refresh';
+
+// Detect if running on HTTPS (Render always uses HTTPS in production)
+// We check X-Forwarded-Proto header because Render terminates SSL at load balancer
+const isHttps = () => process.env.FORCE_HTTPS === 'true' || process.env.NODE_ENV === 'production';
+
 const COOKIE_OPTS = {
-  httpOnly:  true,    // JS cannot read this cookie
-  secure:    process.env.NODE_ENV === 'production', // HTTPS only in production
-  sameSite:  process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  maxAge:    7 * 24 * 60 * 60 * 1000,  // 7 days in ms
-  path:      '/'
+  httpOnly: true,
+  secure:   true,        // Always true — Render always serves HTTPS
+  sameSite: 'none',      // Required for cross-origin HTTPS cookies
+  maxAge:   7 * 24 * 60 * 60 * 1000,  // 7 days in ms
+  path:     '/'
+};
+
+// For local dev (no HTTPS), override to lax/insecure
+const getCookieOpts = (req) => {
+  const proto = req?.headers?.['x-forwarded-proto'] || req?.protocol || 'http';
+  const isSecure = proto === 'https' || process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure:   isSecure,
+    sameSite: isSecure ? 'none' : 'lax',
+    maxAge:   7 * 24 * 60 * 60 * 1000,
+    path:     '/'
+  };
 };
 
 const authLimiter = rateLimit({
@@ -41,7 +59,7 @@ const authLimiter = rateLimit({
 const signAccess  = (user) => jwt.sign(
   { id: user._id, email: user.email, role: user.role, name: user.name },
   process.env.JWT_ACCESS_SECRET,
-  { expiresIn: process.env.JWT_ACCESS_EXPIRES || '15m' }
+  { expiresIn: process.env.JWT_ACCESS_EXPIRES || '7d' }  // 7 days — keep users logged in
 );
 
 const signRefresh = (user, expiresIn) => jwt.sign(
@@ -127,7 +145,7 @@ router.post('/register',
       });
 
       // Set httpOnly cookie for refresh token
-      res.cookie(REFRESH_COOKIE, refreshToken, { ...COOKIE_OPTS, maxAge: 7 * 24 * 60 * 60 * 1000 });
+      res.cookie(REFRESH_COOKIE, refreshToken, { ...getCookieOpts(req), maxAge: 7 * 24 * 60 * 60 * 1000 });
 
       await audit({ userId: user._id, action: 'REGISTER', resource: 'User', req });
       res.status(201).json({
@@ -221,7 +239,7 @@ router.post('/login',
       });
 
       // Set httpOnly refresh cookie
-      res.cookie(REFRESH_COOKIE, refreshToken, { ...COOKIE_OPTS, maxAge: 7 * 24 * 60 * 60 * 1000 });
+      res.cookie(REFRESH_COOKIE, refreshToken, { ...getCookieOpts(req), maxAge: 7 * 24 * 60 * 60 * 1000 });
 
       await audit({ userId: user._id, action: 'LOGIN', resource: 'User', details: { deviceName: deviceInfo.name }, req });
 
@@ -253,13 +271,13 @@ router.post('/refresh', async (req, res, next) => {
     try {
       decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     } catch {
-      res.clearCookie(REFRESH_COOKIE, COOKIE_OPTS);
+      res.clearCookie(REFRESH_COOKIE, getCookieOpts(req));
       return res.status(401).json({ error: 'Invalid or expired refresh token' });
     }
 
     const session = await Session.findOne({ refreshToken, revokedAt: null });
     if (!session || session.expiresAt < new Date()) {
-      res.clearCookie(REFRESH_COOKIE, COOKIE_OPTS);
+      res.clearCookie(REFRESH_COOKIE, getCookieOpts(req));
       return res.status(401).json({ error: 'Session expired. Please login again.' });
     }
 
@@ -275,7 +293,7 @@ router.post('/refresh', async (req, res, next) => {
 
     const user = await User.findOne({ _id: decoded.id, deletedAt: null, isActive: true });
     if (!user) {
-      res.clearCookie(REFRESH_COOKIE, COOKIE_OPTS);
+      res.clearCookie(REFRESH_COOKIE, getCookieOpts(req));
       return res.status(401).json({ error: 'User not found' });
     }
 
@@ -300,7 +318,7 @@ router.post('/refresh', async (req, res, next) => {
 
     // Update cookie with new refresh token and proper remaining maxAge
     res.cookie(REFRESH_COOKIE, newRefresh, {
-      ...COOKIE_OPTS,
+      ...getCookieOpts(req),
       maxAge: Math.max(0, new Date(session.expiresAt).getTime() - Date.now())
     });
 
@@ -435,7 +453,7 @@ router.post('/otp/login',
         expiresAt:         exp
       });
 
-      res.cookie(REFRESH_COOKIE, refreshToken, { ...COOKIE_OPTS, maxAge: 7 * 24 * 60 * 60 * 1000 });
+      res.cookie(REFRESH_COOKIE, refreshToken, { ...getCookieOpts(req), maxAge: 7 * 24 * 60 * 60 * 1000 });
       await audit({ userId: user._id, action: 'LOGIN_OTP', resource: 'User', details: { mobile: phone, isNewUser }, req });
 
       res.json({
@@ -570,7 +588,7 @@ router.post('/google/login',
         expiresAt:         exp
       });
 
-      res.cookie(REFRESH_COOKIE, refreshToken, { ...COOKIE_OPTS, maxAge: 7 * 24 * 60 * 60 * 1000 });
+      res.cookie(REFRESH_COOKIE, refreshToken, { ...getCookieOpts(req), maxAge: 7 * 24 * 60 * 60 * 1000 });
       await audit({ userId: user._id, action: 'LOGIN_GOOGLE', resource: 'User', details: { email, isNewUser }, req });
 
       res.json({
@@ -596,7 +614,7 @@ router.post('/logout', protect, async (req, res, next) => {
     if (req.query.all === 'true') {
       await Session.updateMany({ userId: req.user.id, revokedAt: null }, { revokedAt: new Date() });
     }
-    res.clearCookie(REFRESH_COOKIE, COOKIE_OPTS);
+    res.clearCookie(REFRESH_COOKIE, getCookieOpts(req));
     await audit({ userId: req.user.id, action: 'LOGOUT', resource: 'User', req });
     res.json({ success: true });
   } catch (err) { next(err); }
@@ -623,7 +641,7 @@ router.put('/password', protect,
       user.passwordHash = await User.hashPassword(req.body.newPassword);
       await user.save();
       await Session.updateMany({ userId: user._id, revokedAt: null }, { revokedAt: new Date() });
-      res.clearCookie(REFRESH_COOKIE, COOKIE_OPTS);
+      res.clearCookie(REFRESH_COOKIE, getCookieOpts(req));
       await audit({ userId: user._id, action: 'PASSWORD_CHANGED', resource: 'User', req });
       res.json({ success: true, message: 'Password changed. Please login again.' });
     } catch (err) { next(err); }
@@ -648,3 +666,4 @@ router.put('/update-profile', protect, async (req, res, next) => {
 });
 
 module.exports = router;
+
