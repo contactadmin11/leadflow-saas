@@ -5050,7 +5050,9 @@ async function _sendEmailWithPDF(email,name,subject,message,type,id){
     if(typeof API!=='undefined'&&API.isLoggedIn()){
       const result=await API.sendEmail({
         toEmail:email,toName:name||email,subject,message,
-        docType:type,docId:id
+        docType:type,docId:id,
+        pdfBase64: _sdPdfResult ? _sdPdfResult.base64 : undefined,
+        fileName: _sdPdfResult ? _sdPdfResult.fname : undefined
       });
       if(result&&result.success){
         toast(`✅ Email with PDF sent to ${email}!`,'success',5000);

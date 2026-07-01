@@ -59,7 +59,7 @@ const authLimiter = rateLimit({
 const signAccess  = (user) => jwt.sign(
   { id: user._id, email: user.email, role: user.role, name: user.name },
   process.env.JWT_ACCESS_SECRET,
-  { expiresIn: process.env.JWT_ACCESS_EXPIRES || '7d' }  // 7 days — keep users logged in
+  { expiresIn: '7d' }  // 7 days — hardcoded to prevent Render env vars from breaking sessions
 );
 
 const signRefresh = (user, expiresIn) => jwt.sign(

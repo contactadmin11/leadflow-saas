@@ -66,17 +66,22 @@ router.post('/whatsapp', async (req, res, next) => {
  * Send an email with optional PDF attachment.
  * Body: { toEmail, toName, subject, message, docType?, docId? }
  */
-router.post('/email', async (req, res, next) => {
+router.post('/email', async (req, res) => {
   try {
     const { toEmail, toName, subject, message, docType, docId, pdfBase64, fileName } = req.body;
-    if (!toEmail) return res.status(400).json({ error: 'Email required' });
+    if (!toEmail) return res.status(400).json({ success: false, error: 'Email address required.' });
+    if (!subject) return res.status(400).json({ success: false, error: 'Email subject required.' });
 
+    // Load settings and validate Gmail config upfront
     const settings = await Settings.findOne({ userId: req.user.id });
-    if (!settings) return res.status(400).json({ error: 'Settings not found. Configure email first.' });
+    if (!settings) return res.status(400).json({ success: false, error: 'Settings not found. Go to Settings and save your details.' });
+    if (!settings.gmailUserEnc) return res.status(400).json({ success: false, error: 'Gmail not configured. Go to Settings → Email Integration and add your Gmail address.' });
+    if (!settings.gmailPassEnc) return res.status(400).json({ success: false, error: 'Gmail App Password not configured. Go to Settings → Email Integration and add your App Password.' });
 
     let pdfBuffer = null;
     let pdfName   = null;
 
+    // PDF from base64 (client sent it directly)
     if (pdfBase64 && fileName) {
       pdfBuffer = Buffer.from(pdfBase64, 'base64');
       pdfName   = fileName;
@@ -85,17 +90,34 @@ router.post('/email', async (req, res, next) => {
         if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } }).catch(()=>null);
       }
     } else if (docType && docId && /^[0-9a-fA-F]{24}$/.test(docId)) {
-      const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
-      pdfBuffer = buffer;
-      pdfName   = filename;
+      // Generate PDF on server side
+      try {
+        const { buffer, filename } = await createPDFBuffer(docType, docId, req.user.id);
+        pdfBuffer = buffer;
+        pdfName   = filename;
+      } catch (pdfErr) {
+        return res.status(500).json({ success: false, error: `PDF generation failed: ${pdfErr.message}. Try sending without PDF attachment.` });
+      }
       if (docType === 'invoice') await Invoice.findByIdAndUpdate(docId, { $set: { status: 'Sent' } }).catch(()=>null);
       if (docType === 'quote')   await Quote.findByIdAndUpdate(docId,   { $set: { status: 'Sent' } }).catch(()=>null);
     }
 
-    const result = await sendEmail(settings, toEmail, toName, subject, message, pdfBuffer, pdfName);
-    await audit({ userId: req.user.id, action: 'EMAIL_SENT', resource: docType || 'message', resourceId: docId, details: { toEmail }, req });
-    res.json(result);
-  } catch (err) { next(err); }
+    // Send email
+    try {
+      const result = await sendEmail(settings, toEmail, toName, subject, message, pdfBuffer, pdfName);
+      await audit({ userId: req.user.id, action: 'EMAIL_SENT', resource: docType || 'message', resourceId: docId, details: { toEmail }, req });
+      return res.json({ success: true, ...result });
+    } catch (emailErr) {
+      const msg = emailErr.message || 'SMTP error';
+      let hint = '';
+      if (msg.includes('Invalid login') || msg.includes('Username and Password')) hint = ' — Wrong Gmail or App Password. Re-enter in Settings → Email.';
+      else if (msg.includes('not configured')) hint = ' — Add Gmail credentials in Settings → Email Integration.';
+      else if (msg.includes('timeout')) hint = ' — Server timeout. Try again.';
+      return res.status(500).json({ success: false, error: `Email send failed: ${msg}${hint}` });
+    }
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message || 'Unexpected server error' });
+  }
 });
 
 /**
