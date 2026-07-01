@@ -5035,15 +5035,17 @@ function _showWAGuide(fname){
 
 // ── EMAIL via Node.js server (Nodemailer + Gmail, real PDF attachment) ──
 async function _sendEmailWithPDF(email,name,subject,message,type,id){
-  if(!email){toast('Email address required','warning');return;}
-  const trimmedEmail = email.trim();
-  const emails = trimmedEmail.split(/[\s,;]+/).filter(Boolean);
-  if (emails.length === 0) {
-    toast('Invalid email format: '+email,'warning');
-    return;
-  }
-  if(!_sdPdfResult)_sdPdfResult=await buildDocPDF(type,id);
-  try{
+  try {
+    if(!email){toast('Email address required','warning');return;}
+    const trimmedEmail = email.trim();
+    const emails = trimmedEmail.split(/[\s,;]+/).filter(Boolean);
+    if (emails.length === 0) {
+      toast('Invalid email format: '+email,'warning');
+      return;
+    }
+    
+    if(!_sdPdfResult)_sdPdfResult=await buildDocPDF(type,id);
+    
     // Use API client (routes to /api/send/email — SaaS backend with Gmail PDF attachment)
     if(typeof API!=='undefined'&&API.isLoggedIn()){
       const result=await API.sendEmail({
@@ -5056,11 +5058,12 @@ async function _sendEmailWithPDF(email,name,subject,message,type,id){
       }
       throw new Error((result&&result.error)||'Email send failed');
     }else{
-      throw new Error('Not logged in');
+      throw new Error('Not logged in. Please log in first.');
     }
   }catch(e){
     console.error('Email error:',e);
-    toast('Email via server failed ('+e.message+')\n💡 Check Gmail config in Settings → Email','error',8000);
+    // Remove the hardcoded hint since the server now provides specific hints
+    toast('Email failed: ' + e.message,'error',8000);
   }
 }
 
