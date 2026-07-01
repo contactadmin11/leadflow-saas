@@ -26,9 +26,9 @@ const createTransporter = (settings) => {
       tls: {
         rejectUnauthorized: false // Bypass strict cert issues on some hosts
       },
-      connectionTimeout: 15000,
-      greetingTimeout: 15000,
-      socketTimeout: 20000
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000
     }),
     fromEmail: gmailUser,
     fromName:  settings.gmailFromName || settings.bizName || 'LeadFlow'
@@ -100,8 +100,8 @@ const sendEmail = async (settings, toEmail, toName, subject, message, pdfBuffer,
     }] : []
   };
 
-  // Retry up to 3 times with exponential back-off
-  await withRetry(() => transporter.sendMail(mailOptions), 3, 800);
+  // Render blocks SMTP on free tier; fail fast (1 attempt) to show the timeout error quickly
+  await withRetry(() => transporter.sendMail(mailOptions), 1, 0);
 
   logger.info(`✅ Email sent → ${toEmail}${pdfBuffer ? ' (with PDF)' : ''}`);
   return { success: true, method: pdfBuffer ? 'email_with_pdf' : 'email_only' };
