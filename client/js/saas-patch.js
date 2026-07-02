@@ -708,7 +708,7 @@ function _showPaywall(sub) {
           ₹2,900 / Year — Best Value
         </button>
       </div>
-      <p style="font-size:12px;color:#7a92b0"><i>🔒 7-day money-back guarantee · Secure via Razorpay · GST invoice provided</i></p>
+      <p style="font-size:12px;color:#7a92b0"><i>🔒 7-day money-back guarantee · Secure via Razorpay</i></p>
       <button onclick="document.getElementById('lfPaywall').style.display='none'" style="margin-top:16px;background:none;border:none;color:#7a92b0;font-size:12px;cursor:pointer;font-family:inherit">
         View app in read-only mode
       </button>
@@ -724,8 +724,8 @@ window._upgradeCheckout = async function(plan) {
     const rzpKey    = plansData.razorpayKey;
 
     if (!rzpKey) {
-      // No Razorpay configured — redirect to landing page pricing
-      window.open('/landing.html#pricing', '_blank');
+      // No Razorpay configured — redirect to landing page pricing in same tab to prevent popup blocker
+      window.location.href = '/landing.html#pricing';
       return;
     }
 

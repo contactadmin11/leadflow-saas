@@ -774,14 +774,16 @@ function submitBuyForm() {
     'GST No. : ' + (gst || 'Not provided') + '\n' +
     '================================\n'
   );
-  window.open('https://mail.google.com/mail/?view=cm&fs=1&to=contactadmin11@gmail.com&su=' + subject + '&body=' + body, '_blank');
+  
+  // Use mailto: which is universally supported and never blocked by popup blockers
+  window.location.href = 'mailto:contactadmin11@gmail.com?subject=' + subject + '&body=' + body;
 
   setTimeout(() => {
     document.getElementById('buyModalContent').innerHTML = `
       <div class="buy-success">
         <h2 style="margin-bottom:12px;color:var(--accent)">Inquiry Ready!</h2>
         <p style="color:var(--text2);margin-bottom:16px;line-height:1.6;font-size:14px">
-          Gmail has been opened in a new tab.<br>Just click <strong>Send</strong> and we'll contact you within 2 hours!
+          Your email app has been opened.<br>Just click <strong>Send</strong> in your email app and we'll contact you within 2 hours!
         </p>
         <button class="buy-btn" onclick="closeBuyModal()">Close</button>
       </div>
